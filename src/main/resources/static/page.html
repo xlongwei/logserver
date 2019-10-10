@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>page log</title>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-xs-4">
+			<input class="form-control" @keyup.enter="search" placeholder="search">
+		</div>
+		<div class="col-xs-1">
+			<select class="form-control" @change="gotoPage">
+				<option v-for="page in pager.others" value="{{page}}">{{page}}</option>
+			</select>
+		</div>
+		<div class="col-xs-5">
+	    	<a class="btn" @click="first">首页</a>
+	    	<a class="btn" @click="prev">上页</a>	
+	    	<input size="1" @keyup.enter="gotoPage" placeholder="跳转" value="{{pager.currentPage}}"/>/{{pager.totalPages}}
+			<a class="btn" @click="next">下页</a>
+			<a class="btn" @click="last">尾页</a>
+		</div>
+	</div>
+	<div class="row">
+		<a v-for="log in logs" class="btn" @click="gotoLog">{{log}}</a>
+	</div>
+	<pre>{{pager.properties}}</pre>
+<div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.18/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/0.7.0/vue-resource.js"></script>
+<script type="text/javascript">
+	new Vue({
+		el : '.container-fluid',
+		data: {
+			logs: ['all.logs','all.logs.2019-10-09'],
+			log: 'all.logs',
+			searchStr: '',
+			pager: {
+				totalRows: 0,
+				pageSize: 100,
+				currentPage: 1,
+				totalPages: 0,
+				properties: 'page log',
+				others: []
+			}
+		},
+		methods: {
+			first: function(){
+				this.page(1);
+			},
+			prev: function(){
+				this.page(this.pager.currentPage - 1);
+			},
+			next: function(){
+				this.page(this.pager.currentPage + 1);
+			},
+			last: function(){
+				this.page(this.pager.totalPages);
+			},
+			gotoPage: function(e){
+				this.page(e.target.value)
+			},
+			gotoLog: function(e){
+				this.log = e.target.text;
+				this.pager.totalRows = 0;
+				this.pager.others = [];
+				this.first();
+			},
+			page: function(num){
+				if(num<1 || this.pager.totalPages<1) num = 1;
+				else if(num>this.pager.totalPages) num = this.pager.totalPages;
+				if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
+				console.log(this.log+" => page: "+num);
+				this.$http({method:'GET', url:'/log?type=page&log='+this.log
+						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
+						+"&pageSize="+this.pager.pageSize
+						+"&currentPage="+num
+						+"&search="+(this.pager.others.length>0?'':this.searchStr)}).then(function(response){
+					if(this.pager.totalRows<1){
+						//this.pager = response.data;
+						this.pager.currentPage = num;
+						this.pager.totalRows = response.data.totalRows;
+						this.pager.totalPages = response.data.totalPages;
+						this.pager.properties = response.data.properties;
+						this.pager.others = !response.data.others ? [] : response.data.others;
+					}else{
+						this.pager.currentPage = num;
+						this.pager.properties = response.data.properties;
+						if(this.pager.totalPages>1 && num==this.pager.totalPages){
+							this.pager.totalRows = response.data.totalRows;
+							this.pager.totalPages = response.data.totalPages;
+						}
+					}
+					//var a=JSON.parse(JSON.stringify(this.pager));
+					//delete a.properties;
+					//console.log(JSON.stringify(a))
+				})
+			},
+			search: function(e){
+				var str = e.target.value;
+				this.searchStr = !str ? '' : str;
+				this.doSearch();
+			},
+			doSearch: function(){
+				this.$http({method:'GET', url:'/log?type=list&search='+this.searchStr}).then(function(response){
+					this.logs = response.data;
+					if(this.logs.length > 0) {
+						this.log =this.logs[0];
+						this.first();
+					}else{
+						this.log = 'all.logs';
+						this.pager.totalRows = 0;
+						this.pager.properties = '';
+						this.pager.others = [];
+					}
+				})
+			}
+		},
+		ready: function(){
+			this.doSearch();
+		}
+	})
+</script>
+</html>

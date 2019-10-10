@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>tail log</title>
+<script src="https://cdn.bootcss.com/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script>
+	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
+	var socket = new ReconnectingWebSocket(wsurl);
+	socket.onmessage = function(event) {
+		var chat = document.getElementById('tail');
+		chat.innerHTML = chat.innerHTML + event.data + "<br />";
+		chat.scrollTop = chat.scrollHeight;
+	};
+</script>
+<style type="text/css">
+</style>
+</head>
+<body>
+	<div id="tail" style="height: 100%; width: 100%; overflow: scroll;">
+	</div>
+</body>
+</html>

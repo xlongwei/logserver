@@ -1,0 +1,10 @@
+enabled: true
+
+handlers:
+  - com.xlongwei.logserver.PathHandlerProvider@path
+
+paths:
+  - path: '/*'
+    method: 'GET'
+    exec:
+      - path
