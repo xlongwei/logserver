@@ -2,11 +2,17 @@ package com.xlongwei.logserver;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.networknt.utility.CollectionUtil;
 
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -23,6 +29,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 public class TailCallback implements WebSocketConnectionCallback {
 	private Tailer tailer = null;
 	private Logger log = LoggerFactory.getLogger(getClass());
+	private ExecutorService tailerService = Executors.newSingleThreadExecutor();
 	
 	@Override
 	public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
@@ -33,16 +40,19 @@ public class TailCallback implements WebSocketConnectionCallback {
     			tailer = new Tailer(logs, StandardCharsets.UTF_8, new TailerListenerAdapter() {
 					@Override
 					public void handle(String line) {
-						if(channel.getPeerConnections().isEmpty()) {
-							log.info("tailer stop and end");
-							tailer.stop();
-							tailer = null;
+						List<WebSocketChannel> connections = channel.getPeerConnections().stream().filter(c -> c.isOpen()).collect(Collectors.toList());
+						if(CollectionUtil.isEmpty(connections)) {
+							if(tailer != null) {
+								log.info("tailer stop and end");
+								tailer.stop();
+								tailer = null;
+							}
 						}else {
-							channel.getPeerConnections().parallelStream().forEach(c -> WebSockets.sendText(line, c, null));
+							connections.parallelStream().forEach(c -> WebSockets.sendText(line, c, null));
 						}
 					}
     			}, 1000, true, false, 4096);
-    			tailer.run();
+    			tailerService.submit(tailer);
     			log.info("tailer init and start");
 			}else {
 				log.info("tailer logs not exist: "+ExecUtil.logs);
@@ -52,7 +62,7 @@ public class TailCallback implements WebSocketConnectionCallback {
 			@Override
 			protected void onCloseMessage(CloseMessage cm, WebSocketChannel channel) {
 				log.info("tailer logs on disconnect");
-				if(tailer!=null && channel.getPeerConnections().isEmpty()) {
+				if(tailer!=null && CollectionUtil.isEmpty(channel.getPeerConnections().stream().filter(c -> c.isOpen()).collect(Collectors.toList()))) {
 					tailer.stop();
 					tailer = null;
 					log.info("tailer stop and end");

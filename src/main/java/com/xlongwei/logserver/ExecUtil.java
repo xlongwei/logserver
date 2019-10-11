@@ -34,7 +34,7 @@ import com.networknt.utility.Util;
  */
 public class ExecUtil {
 	public static boolean isWindows = OS.isFamilyWindows();
-	public static String logs = System.getProperty("logFile", "logs/all.logs"), dir = new File(logs).getParent();
+	public static String logs = StringUtils.isNotBlank(System.getProperty("logfile")) ? System.getProperty("logfile") : "logs/all.logs", dir = new File(logs).getParent();
 	private static Logger log = LoggerFactory.getLogger(ExecUtil.class);
 	
 	/** 按日期排倒序，all.logs按当天排首位 */
@@ -45,8 +45,8 @@ public class ExecUtil {
 			String s2 = o2.substring(o2.lastIndexOf('.')+1);
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 			try {
-				Date d1 = StringUtils.isBlank(s1) ? null : df.parse(s1);
-				Date d2 = StringUtils.isBlank(s2) ? null : df.parse(s2);
+				Date d1 = StringUtils.isBlank(s1)||s1.indexOf('-')==-1 ? null : df.parse(s1);
+				Date d2 = StringUtils.isBlank(s2)||s2.indexOf('-')==-1 ? null : df.parse(s2);
 				return d1==null ? -1 : (d2==null ? 1 : d2.compareTo(d1));
 			}catch(Exception e) {
 				return 0;
@@ -169,11 +169,11 @@ public class ExecUtil {
 					log.warn(e.getMessage());
 				}
 			}else {
-				CommandLine command = CommandLine.parse("grep -n "+search+" "+logs+" | cut -d : -f 1");
+				CommandLine command = CommandLine.parse("grep -n "+search+" "+logs);
 				String line = exec(dir, command); //分隔行：\\r?\\n|\\r，忽略空行：[\r?\n|\r]+，Java8：\\R
 				for(String row : line.split("\\R")) {
 					if(StringUtils.isBlank(row)) continue;
-					int n = Util.parseInteger(row);
+					int n = Util.parseInteger(row.substring(0, row.indexOf(':')));
 					if(n>0) lines.add(n);
 				}
 			}
@@ -211,7 +211,9 @@ public class ExecUtil {
 		try{
 			exe.execute(command);
 			log.info("dir: {}, exec: {}, length: {}", dir, command, baos.size());
-			return baos.toString(isWindows ? "GBK" : "UTF-8");
+			String exec = baos.toString(isWindows ? "GBK" : "UTF-8");
+			//log.info(exec);
+			return exec;
 		}catch(Exception e) {
 			log.warn("dir, {}, exec: {}, ex: {}", dir, command, e.getMessage());
 			return "";

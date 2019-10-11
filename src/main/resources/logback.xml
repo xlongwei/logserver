@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration scan="false" scanPeriod="60 seconds" debug="false">
     <contextName>logserver</contextName>
-    <property name="logFile" value="${logFile:-logs/all.logs}"/>
     <property name="logLevel" value="${logLevel:-DEBUG}"/>
     <property name="logPort" value="${logPort:-6000}"/>
     <property name="logPattern" value="%cn %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %msg%n"/>
@@ -16,7 +15,7 @@
 	    <then>
 		    <if condition='property("logfile").isEmpty()'>
 			    <then>
-				    <property name="logfile" value="${logFile}"/>
+				    <property name="logfile" value="logs/all.logs"/>
 			    </then>
 		    </if>
 		    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -35,16 +34,30 @@
 		<port>${logPort}</port>
 	</receiver>
 	
-	<logger name="com.networknt" level="WARN" />
-	<logger name="io.undertow" level="WARN" />
-	<logger name="org.xnio" level="WARN" />
-	  
-	<root level="${logLevel}">
+	<logger name="com.xlongwei.logserver" level="INFO" additivity="false">
 		<appender-ref ref="STDOUT" />
+	</logger>
+	<logger name="com.networknt" level="WARN" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+	<logger name="io.undertow" level="WARN" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+	<logger name="org.xnio" level="WARN" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+	<logger name="org.jboss" level="WARN" additivity="false">
+		<appender-ref ref="STDOUT" />
+	</logger>
+
+	<root level="${logLevel}">
 		<if condition='isDefined("logfile")'>
 		    <then>
 				<appender-ref ref="FILE" />
 		    </then>		
+			<else>
+				<appender-ref ref="STDOUT" />
+			</else>
 		</if>
 	</root>
 </configuration>

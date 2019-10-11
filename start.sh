@@ -20,7 +20,6 @@ status(){
 	if [ -z "$PIDS" ]; then
 	    echo "logserver is not running!"
 	else
-		echo -e "Stopping logserver ..."
 		for PID in $PIDS ; do
 		    echo "logserver has pid: $PID!"
 		done
@@ -59,8 +58,8 @@ deploy(){
 
 start(){
 	echo "starting logserver ..."
-	JVM_OPS="-server -Xmx256M -XX:MaxPermSize=128m"
-	env enableHttps=false setsid java $JVM_OPS -Dlogfile -jar target/logserver.jar >> /dev/null 2>&1 &
+	JVM_OPS="-server -Xmx256M"
+	env enableHttps=false setsid java $JVM_OPS -Dlogfile=/usr/nfs/logs/all.logs -jar target/logserver.jar >> /dev/null 2>&1 &
 }
 
 if [ $# -eq 0 ]; then 

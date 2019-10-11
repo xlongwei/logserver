@@ -36,16 +36,16 @@
 	new Vue({
 		el : '.container-fluid',
 		data: {
-			logs: ['all.logs','all.logs.2019-10-09'],
-			log: 'all.logs',
-			searchStr: '',
-			pager: {
+			logs: ['all.logs','all.logs.2019-10-09'], //日志文件列表，查询接口log?type=list&search=
+			log: 'all.logs',  //当前浏览日志文件
+			searchStr: '',  //搜索字符串
+			pager: {  //分页查询日志，查询接口log?type=page&log=&currentPage=，totalRows缓存总函数，search搜索出现页码
 				totalRows: 0,
-				pageSize: 100,
+				pageSize: 100,  //默认每页100行日志
 				currentPage: 1,
 				totalPages: 0,
-				properties: 'page log',
-				others: []
+				properties: '', //日志分页文本
+				others: []  //搜索出现页码列表
 			}
 		},
 		methods: {
@@ -73,7 +73,8 @@
 			page: function(num){
 				if(num<1 || this.pager.totalPages<1) num = 1;
 				else if(num>this.pager.totalPages) num = this.pager.totalPages;
-				if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
+				//这里可选优化为不重复查询当前页
+				//if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
 				console.log(this.log+" => page: "+num);
 				this.$http({method:'GET', url:'/log?type=page&log='+this.log
 						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
@@ -86,6 +87,7 @@
 						this.pager.totalRows = response.data.totalRows;
 						this.pager.totalPages = response.data.totalPages;
 						this.pager.properties = response.data.properties;
+						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
 					}else{
 						this.pager.currentPage = num;
@@ -95,9 +97,10 @@
 							this.pager.totalPages = response.data.totalPages;
 						}
 					}
-					//var a=JSON.parse(JSON.stringify(this.pager));
-					//delete a.properties;
-					//console.log(JSON.stringify(a))
+					//输出调试信息
+					var a=JSON.parse(JSON.stringify(this.pager));
+					delete a.properties;
+					console.log(JSON.stringify(a))
 				})
 			},
 			search: function(e){
@@ -110,6 +113,8 @@
 					this.logs = response.data;
 					if(this.logs.length > 0) {
 						this.log =this.logs[0];
+						this.pager.totalRows = 0;
+						this.pager.others = [];
 						this.first();
 					}else{
 						this.log = 'all.logs';
