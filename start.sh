@@ -1,3 +1,11 @@
+#!/bin/sh
+
+daemon=true
+logfile=logs/all.logs
+jarfile=target/logserver.jar
+[ ! -e "$jarfile" ] && jarfile=logserver.jar
+#ENV_OPS="PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
+
 usage(){
     echo "Usage: start.sh ( commands ... )"
     echo "commands: "
@@ -59,7 +67,12 @@ deploy(){
 start(){
 	echo "starting logserver ..."
 	JVM_OPS="-server -Xmx256M"
-	env enableHttps=false setsid java $JVM_OPS -Dlogfile=/usr/nfs/logs/all.logs -jar target/logserver.jar >> /dev/null 2>&1 &
+	ENV_OPS="$ENV_OPS enableHttps=false"
+	if [ "$daemon" = "true" ]; then
+		env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -jar $jarfile >> /dev/null 2>&1 &
+	else
+		env $ENV_OPS java $JVM_OPS -Dlogfile=$logfile -jar $jarfile 2>&1
+	fi
 }
 
 if [ $# -eq 0 ]; then 
