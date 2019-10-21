@@ -57,7 +57,7 @@ public class PageHandler implements LightHttpHandler {
 			//搜索search所在页码列表
 			if(StringUtils.isNotBlank(search)) {
 				List<Integer> lines = ExecUtil.lines(logs, search);
-				List<Integer> pages = ExecUtil.pages(lines, pager.getPageSize());
+				List<Integer[]> pages = ExecUtil.pages(lines, pager.getPageSize());
 				pager.setOthers(pages);
 			}
 			response = mapper.writeValueAsString(pager);

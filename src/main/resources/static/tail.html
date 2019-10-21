@@ -9,15 +9,13 @@
 	var socket = new ReconnectingWebSocket(wsurl);
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail');
-		chat.innerHTML = chat.innerHTML + event.data + "<br />";
+		chat.innerHTML = chat.innerHTML + event.data + "\n";
 		chat.scrollTop = chat.scrollHeight;
 	};
 </script>
-<style type="text/css">
-</style>
 </head>
 <body>
-	<div id="tail" style="height: 100%; width: 100%; overflow: scroll;">
-	</div>
+	<pre id="tail" style="height: 688px; width: 100%; overflow: scroll;">
+	</pre>
 </body>
 </html>

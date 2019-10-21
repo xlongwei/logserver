@@ -3,31 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <title>logserver</title>
+<link href="https://cdn.bootcss.com/twitter-bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
 <style type="text/css">
-a {
-	text-decoration: none;
-}
-fieldset {
-	border: none;
+pre {
+	overflow: scroll;
 }
 </style>
 </head>
 <body>
-	<fieldset>
-		<legend><a href="tail.html">实时跟踪</a></legend>
-		实时跟踪最新日志，使用WebSocket技术。
-	</fieldset>
-	<fieldset>
-		<legend><a href="page.html">分页查看</a></legend>
-		分页查看最近日志，支持搜索，然后点击要查看的日志文件，右侧下拉框会提示搜索串出现的页码。
-	</fieldset>
-	<fieldset>
-		<legend><a href="logs.html">下载日志</a></legend>
-		下载最近日志文件，支持搜索。
-	</fieldset>
-	<fieldset>
-		<legend><a href="files">Nginx浏览</a></legend>
-		<a href="https://gitee.com/xlongwei/logserver/blob/master/README.md">nginx配置</a>auth_basic可以要求登录认证，浏览日志文件时可以鼠标右键另存为。
-	</fieldset>
+	<div class="container-fluid">
+		<div class="tabs-container">
+			<ul class="nav nav-tabs">
+				<!-- <li v-for="tab in tabs" :class="{active:tabName==tab}"><a data-toggle="tab" href="#tab-{{tab}}">{{tab}}</a></li> -->
+				<li class="active"><a data-toggle="tab" href="#tab-tail" @dblclick="open('/tail.html')" title="实时跟踪最新日志，使用WebSocket技术">tail</a></li>
+				<li class=""><a data-toggle="tab" href="#tab-page" @dblclick="open('/page.html')" title="分页查看最近日志，支持搜索">page</a></li>
+				<li class=""><a data-toggle="tab" href="#tab-logs" @dblclick="open('/log.html')" title="下载最近日志文件">logs</a></li>
+				<li class=""><a href="/files" @dblclick="open('/files')" target="_blank" title="nginx浏览">files</a></li>
+			</ul>
+			<div class="tab-content">
+				<div id="tab-tail" class="tab-pane active">
+					<div class="panel-body">
+						<pre id="tail" style="height:647px"></pre>
+					</div>
+				</div>
+				<div id="tab-page" class="tab-pane">
+					<div class="panel-body">
+						<div class="row">
+							<div class="col-xs-5">
+								<input class="form-control" @keyup.enter="search" placeholder="search">
+							</div>
+							<div class="col-xs-2">
+								<select class="form-control" @change="gotoPage">
+									<option v-for="page in pager.others" value="{{page[0]}}">第 {{page[0]}} 页有 {{page[1]}} 次</option>
+								</select>
+							</div>
+							<div class="col-xs-5">
+						    	<a class="btn" @click="first">首页</a>
+						    	<a class="btn" @click="prev">上页</a>	
+						    	<input size="1" @keyup.enter="gotoPage" placeholder="跳转" v-model="pager.currentPage" value="{{pager.currentPage}}"/>/{{pager.totalPages}}
+								<a class="btn" @click="next">下页</a>
+								<a class="btn" @click="last">尾页</a>
+							</div>
+						</div>
+						<div class="row">
+							<a v-for="log in logs" class="btn" @click="gotoLog">{{log}}</a>
+						</div>
+						<pre style="height: 580px">{{pager.properties}}</pre>
+					</div>
+				</div>
+				<div id="tab-logs" class="tab-pane">
+					<div class="panel-body">
+						<div class="row">
+							<input class="form-control" @keyup.enter="search" placeholder="search">
+						</div>
+						<a v-for="log in logs" class="btn" href="logs/{{log}}">{{log}}</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
+<script src="https://cdn.bootcss.com/vue/1.0.18/vue.min.js"></script>
+<script src="https://cdn.bootcss.com/vue-resource/0.7.0/vue-resource.min.js"></script>
+<script src="https://cdn.bootcss.com/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script src="https://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://cdn.bootcss.com/twitter-bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<script type="text/javascript">
+	new Vue({
+		el : '.container-fluid',
+		data: {
+			logs: ['all.logs','all.logs.2019-10-09'], //日志文件列表，查询接口log?type=list&search=
+			log: 'all.logs',  //当前浏览日志文件
+			searchStr: '',  //搜索字符串
+			pager: {  //分页查询日志，查询接口log?type=page&log=&currentPage=，totalRows缓存总函数，search搜索出现页码
+				totalRows: 0,
+				pageSize: 100,  //默认每页100行日志
+				currentPage: 1,
+				totalPages: 0,
+				properties: '', //日志分页文本
+				others: []  //搜索出现页码列表
+			}
+		},
+		methods: {
+			first: function(){
+				this.page(1);
+			},
+			prev: function(){
+				this.page(this.pager.currentPage - 1);
+			},
+			next: function(){
+				this.page(this.pager.currentPage + 1);
+			},
+			last: function(){
+				this.page(this.pager.totalPages);
+			},
+			gotoPage: function(e){
+				this.page(e.target.value)
+			},
+			gotoLog: function(e){
+				this.log = e.target.text;
+				this.pager.totalRows = 0;
+				this.pager.others = [];
+				this.first();
+			},
+			page: function(num){
+				if(num<1 || this.pager.totalPages<1) num = 1;
+				else if(num>this.pager.totalPages) num = this.pager.totalPages;
+				//这里可选优化为不重复查询当前页
+				if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
+				console.log(this.log+" => page: "+num);
+				this.pager.currentPage = num;
+				this.$http({method:'GET', url:'/log?type=page&log='+this.log
+						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
+						+"&pageSize="+this.pager.pageSize
+						+"&currentPage="+num
+						+"&search="+(this.pager.others.length>0?'':this.searchStr)}).then(function(response){
+					if(this.pager.totalRows<1){
+						//this.pager = response.data;
+						this.pager.totalRows = response.data.totalRows;
+						this.pager.totalPages = response.data.totalPages;
+						this.pager.properties = response.data.properties;
+						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
+						this.pager.others = !response.data.others ? [] : response.data.others;
+						if(this.pager.others.length > 0) {
+							this.page(this.pager.others[0][0]);
+						}
+					}else{
+						this.pager.properties = response.data.properties;
+						if(this.pager.totalPages>1 && num==this.pager.totalPages){
+							this.pager.totalRows = response.data.totalRows;
+							this.pager.totalPages = response.data.totalPages;
+						}
+					}
+					//输出调试信息
+					var a=JSON.parse(JSON.stringify(this.pager));
+					delete a.properties;
+					console.log(JSON.stringify(a))
+				})
+			},
+			search: function(e){
+				var str = e.target.value;
+				this.searchStr = !str ? '' : str;
+				this.doSearch();
+			},
+			doSearch: function(){
+				this.$http({method:'GET', url:'/log?type=list&search='+this.searchStr}).then(function(response){
+					this.logs = response.data;
+					if(this.logs.length > 0) {
+						this.log =this.logs[0];
+						this.pager.totalRows = 0;
+						this.pager.others = [];
+						this.first();
+					}else{
+						this.log = 'all.logs';
+						this.pager.totalRows = 0;
+						this.pager.properties = '';
+						this.pager.others = [];
+					}
+				})
+			},
+			open: function(page){
+				window.open(page, '_blank');
+			}
+		},
+		ready: function(){
+			this.doSearch();
+		}
+	});
+	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
+	var socket = new ReconnectingWebSocket(wsurl);
+	socket.onmessage = function(event) {
+		var chat = document.getElementById('tail');
+		chat.innerHTML = chat.innerHTML + event.data + "\n";
+		chat.scrollTop = chat.scrollHeight;
+	};	
+</script>
 </html>

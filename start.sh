@@ -66,7 +66,7 @@ deploy(){
 
 start(){
 	echo "starting logserver ..."
-	JVM_OPS="-server -Xmx256M"
+	JVM_OPS="-server -Xmx72M -Xss228k -Djava.awt.headless=true"
 	ENV_OPS="$ENV_OPS enableHttps=false"
 	if [ "$daemon" = "true" ]; then
 		env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -jar $jarfile >> /dev/null 2>&1 &

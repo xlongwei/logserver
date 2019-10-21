@@ -150,7 +150,6 @@ public class ExecUtil {
 		}
 	}
 	
-	
 	/** 搜索search在logs出现的所有行号 */
 	public static List<Integer> lines(String logs, String search) {
 		List<Integer> lines = new ArrayList<>();
@@ -182,17 +181,50 @@ public class ExecUtil {
 	}
 	
 	/** 计算所有行号分布在哪些页码 */
-	public static List<Integer> pages(List<Integer> lines, int pageSize) {
-		List<Integer> pages = new ArrayList<>();
-		int currentPage = 0;
+	public static List<Integer[]> pages(List<Integer> lines, int pageSize) {
+		List<Integer[]> pages = new ArrayList<>();
+		int currentPage = 0, idx = 0;
 		for(Integer line : lines) {
 			int calcPage = (line-1)/pageSize+1;
 			if(calcPage>currentPage) {
-				pages.add(calcPage);
+				pages.add(new Integer[] {calcPage, 1});
 				currentPage = calcPage;
+				idx++;
+			}else {
+				Integer[] arr = pages.get(idx-1);
+				arr[1] = arr[1]+1;
 			}
 		}
 		return pages;
+	}
+	
+	/** 获取最后的num行内容 */
+	public static String tail(String logs, int num) {
+		if(isWindows) {
+			File file = new File(dir, logs);
+			String[] tail = new String[num];
+			int idx = 0;
+			try(LineNumberReader lineNumberReader = new LineNumberReader(new FileReader(file))){
+				String line = null;
+				while((line=lineNumberReader.readLine()) != null) {
+					tail[idx] = line;
+					idx = (idx+1)%num;
+				}
+				final StringBuilder sb = new StringBuilder();
+		        for (int i = 0; i < num; i++) {
+		        	sb.append("\r\n");
+		            sb.append(tail[idx]);
+		            idx = (idx+1)%num;
+		        }
+		        return sb.length()>0 ? sb.substring(2) : sb.toString();
+			}catch(Exception e) {
+				log.warn(e.getMessage());
+				return "";
+			}
+		}else {
+			CommandLine command = CommandLine.parse("tail -n "+num+" "+logs);
+			return exec(dir, command);
+		}
 	}
 	
 	/** 在dir目录执行command命令，返回string文本 */

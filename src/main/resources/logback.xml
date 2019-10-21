@@ -27,6 +27,9 @@
 		            <pattern>${logPattern}</pattern>
 		        </encoder>
 		    </appender>
+			<appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+				<appender-ref ref="FILE" />
+			</appender>
 	    </then>
     </if>
   
@@ -53,7 +56,7 @@
 	<root level="${logLevel}">
 		<if condition='isDefined("logfile")'>
 		    <then>
-				<appender-ref ref="FILE" />
+				<appender-ref ref="ASYNC_FILE" />
 		    </then>		
 			<else>
 				<appender-ref ref="STDOUT" />

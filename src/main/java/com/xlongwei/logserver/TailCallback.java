@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.slf4j.Logger;
@@ -57,6 +58,10 @@ public class TailCallback implements WebSocketConnectionCallback {
 			}else {
 				log.info("tailer logs not exist: "+ExecUtil.logs);
 			}
+		}
+		if(tailer != null) {
+			String tail = ExecUtil.tail(FilenameUtils.getName(ExecUtil.logs), 100);
+			WebSockets.sendText(tail, channel, null);
 		}
 		channel.getReceiveSetter().set(new AbstractReceiveListener() {
 			@Override

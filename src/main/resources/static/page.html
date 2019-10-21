@@ -8,18 +8,18 @@
 <body>
 <div class="container-fluid">
 	<div class="row">
-		<div class="col-xs-4">
+		<div class="col-xs-5">
 			<input class="form-control" @keyup.enter="search" placeholder="search">
 		</div>
-		<div class="col-xs-1">
+		<div class="col-xs-2">
 			<select class="form-control" @change="gotoPage">
-				<option v-for="page in pager.others" value="{{page}}">{{page}}</option>
+				<option v-for="page in pager.others" value="{{page[0]}}">第 {{page[0]}} 页有 {{page[1]}} 次</option>
 			</select>
 		</div>
 		<div class="col-xs-5">
 	    	<a class="btn" @click="first">首页</a>
 	    	<a class="btn" @click="prev">上页</a>	
-	    	<input size="1" @keyup.enter="gotoPage" placeholder="跳转" value="{{pager.currentPage}}"/>/{{pager.totalPages}}
+	    	<input size="1" @keyup.enter="gotoPage" placeholder="跳转" v-model="pager.currentPage" value="{{pager.currentPage}}"/>/{{pager.totalPages}}
 			<a class="btn" @click="next">下页</a>
 			<a class="btn" @click="last">尾页</a>
 		</div>
@@ -89,6 +89,9 @@
 						this.pager.properties = response.data.properties;
 						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
+						if(this.pager.others.length > 0) {
+							this.page(this.pager.others[0][0]);
+						}						
 					}else{
 						this.pager.currentPage = num;
 						this.pager.properties = response.data.properties;
