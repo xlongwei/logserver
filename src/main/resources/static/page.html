@@ -27,11 +27,11 @@
 	<div class="row">
 		<a v-for="log in logs" class="btn" @click="gotoLog">{{log}}</a>
 	</div>
-	<pre>{{pager.properties}}</pre>
+	<pre id="properties">{{pager.properties}}</pre>
 <div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.18/vue.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/0.7.0/vue-resource.js"></script>
+<script src="https://cdn.bootcss.com/vue/1.0.18/vue.min.js"></script>
+<script src="https://cdn.bootcss.com/vue-resource/0.7.0/vue-resource.min.js"></script>
 <script type="text/javascript">
 	new Vue({
 		el : '.container-fluid',
@@ -76,6 +76,7 @@
 				//这里可选优化为不重复查询当前页
 				//if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
 				console.log(this.log+" => page: "+num);
+				this.pager.currentPage = num;
 				this.$http({method:'GET', url:'/log?type=page&log='+this.log
 						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
 						+"&pageSize="+this.pager.pageSize
@@ -83,23 +84,21 @@
 						+"&search="+(this.pager.others.length>0?'':this.searchStr)}).then(function(response){
 					if(this.pager.totalRows<1){
 						//this.pager = response.data;
-						this.pager.currentPage = num;
 						this.pager.totalRows = response.data.totalRows;
 						this.pager.totalPages = response.data.totalPages;
-						this.pager.properties = response.data.properties;
 						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
 						if(this.pager.others.length > 0) {
 							this.page(this.pager.others[0][0]);
 						}						
 					}else{
-						this.pager.currentPage = num;
-						this.pager.properties = response.data.properties;
 						if(this.pager.totalPages>1 && num==this.pager.totalPages){
 							this.pager.totalRows = response.data.totalRows;
 							this.pager.totalPages = response.data.totalPages;
 						}
 					}
+					//this.pager.properties = response.data.properties;
+					document.getElementById('properties').innerHTML = !this.searchStr ? response.data.properties : response.data.properties.replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>');
 					//输出调试信息
 					var a=JSON.parse(JSON.stringify(this.pager));
 					delete a.properties;

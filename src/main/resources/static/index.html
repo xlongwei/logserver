@@ -2,11 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>logserver</title>
 <link href="https://cdn.bootcss.com/twitter-bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
 <style type="text/css">
 pre {
 	overflow: scroll;
+	position: absolute;
+	bottom: 1px;
+	width: 96%;
 }
 </style>
 </head>
@@ -23,14 +27,14 @@ pre {
 			<div class="tab-content">
 				<div id="tab-tail" class="tab-pane active">
 					<div class="panel-body">
-						<pre id="tail" style="height:647px"></pre>
+						<pre id="tail" style="top: 50px" ondblclick="scrollLock=!scrollLock;console.log('scrollLock: '+scrollLock)"></pre>
 					</div>
 				</div>
 				<div id="tab-page" class="tab-pane">
 					<div class="panel-body">
 						<div class="row">
 							<div class="col-xs-5">
-								<input class="form-control" @keyup.enter="search" placeholder="search">
+								<input class="form-control" @keyup.enter="search" placeholder="search" id="search">
 							</div>
 							<div class="col-xs-2">
 								<select class="form-control" @change="gotoPage">
@@ -45,10 +49,10 @@ pre {
 								<a class="btn" @click="last">尾页</a>
 							</div>
 						</div>
-						<div class="row">
-							<a v-for="log in logs" class="btn" @click="gotoLog">{{log}}</a>
+						<div class="row" style="overflow-x:auto;overflow-y:hidden">
+							<a v-for="log in logs" class="btn" style="display:inline" @click="gotoLog">{{log}}</a>
 						</div>
-						<pre style="height: 580px">{{pager.properties}}</pre>
+						<pre style="top: 123px" id="properties"></pre>
 					</div>
 				</div>
 				<div id="tab-logs" class="tab-pane">
@@ -122,19 +126,18 @@ pre {
 						//this.pager = response.data;
 						this.pager.totalRows = response.data.totalRows;
 						this.pager.totalPages = response.data.totalPages;
-						this.pager.properties = response.data.properties;
 						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
 						if(this.pager.others.length > 0) {
 							this.page(this.pager.others[0][0]);
 						}
 					}else{
-						this.pager.properties = response.data.properties;
 						if(this.pager.totalPages>1 && num==this.pager.totalPages){
 							this.pager.totalRows = response.data.totalRows;
 							this.pager.totalPages = response.data.totalPages;
 						}
 					}
+					$('#properties').html(!this.searchStr ? response.data.properties : response.data.properties.replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>'));
 					//输出调试信息
 					var a=JSON.parse(JSON.stringify(this.pager));
 					delete a.properties;
@@ -171,11 +174,12 @@ pre {
 		}
 	});
 	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
-	var socket = new ReconnectingWebSocket(wsurl);
+	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false;
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail');
-		chat.innerHTML = chat.innerHTML + event.data + "\n";
-		chat.scrollTop = chat.scrollHeight;
+		var search = $('#search').val(), text = !search ? event.data : event.data.replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
+		chat.innerHTML = chat.innerHTML + text + "\n";
+		if(scrollLock==false) chat.scrollTop = chat.scrollHeight;
 	};	
 </script>
 </html>
