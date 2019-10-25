@@ -33,20 +33,20 @@ pre {
 				<div id="tab-page" class="tab-pane">
 					<div class="panel-body">
 						<div class="row">
-							<div class="col-xs-5">
+							<div class="col-xs-5" style="padding:0">
 								<input class="form-control" @keyup.enter="search" placeholder="search" id="search">
 							</div>
-							<div class="col-xs-2">
+							<div class="col-xs-2" style="padding:0">
 								<select class="form-control" @change="gotoPage">
 									<option v-for="page in pager.others" value="{{page[0]}}">第 {{page[0]}} 页有 {{page[1]}} 次</option>
 								</select>
 							</div>
-							<div class="col-xs-5">
-						    	<a class="btn" @click="first">首页</a>
-						    	<a class="btn" @click="prev">上页</a>	
+							<div class="col-xs-5" style="height:34px;padding:0;overflow:hidden">
+						    	<a class="btn" style="padding:0" @click="first">首页</a>
+						    	<a class="btn" style="padding:0" @click="prev">上页</a>	
 						    	<input size="1" @keyup.enter="gotoPage" placeholder="跳转" v-model="pager.currentPage" value="{{pager.currentPage}}"/>/{{pager.totalPages}}
-								<a class="btn" @click="next">下页</a>
-								<a class="btn" @click="last">尾页</a>
+								<a class="btn" style="padding:0" @click="next">下页</a>
+								<a class="btn" style="padding:0" @click="last">尾页</a>
 							</div>
 						</div>
 						<div class="row" style="overflow-x:auto;overflow-y:hidden">
@@ -81,7 +81,7 @@ pre {
 			searchStr: '',  //搜索字符串
 			pager: {  //分页查询日志，查询接口log?type=page&log=&currentPage=，totalRows缓存总函数，search搜索出现页码
 				totalRows: 0,
-				pageSize: 100,  //默认每页100行日志
+				pageSize: 1000,  //默认每页1000行日志
 				currentPage: 1,
 				totalPages: 0,
 				properties: '', //日志分页文本
@@ -174,12 +174,13 @@ pre {
 		}
 	});
 	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
-	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false;
+	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, lines = 2900;
 	socket.onmessage = function(event) {
-		var chat = document.getElementById('tail');
+		var chat = document.getElementById('tail'), prefix = lines>0||scrollLock||chat.innerHTML.indexOf('\n')==-1 ? chat.innerHTML : chat.innerHTML.substr(chat.innerHTML.indexOf('\n')+1);
 		var search = $('#search').val(), text = !search ? event.data : event.data.replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
-		chat.innerHTML = chat.innerHTML + text + "\n";
+		chat.innerHTML = prefix + text + "\n";
 		if(scrollLock==false) chat.scrollTop = chat.scrollHeight;
+		if(--lines % 100 ==0) console.log('lines: '+lines);
 	};	
 </script>
 </html>
