@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<configuration scan="false" scanPeriod="60 seconds" debug="false">
-    <contextName>logserver</contextName>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    <contextName>${contextName:-logserver}</contextName>
     <property name="logLevel" value="${logLevel:-DEBUG}"/>
     <property name="logPort" value="${logPort:-6000}"/>
-    <property name="logPattern" value="%cn %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %msg%n"/>
+    <property name="logPattern" value="%cn %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %.-${logLength:-2048}msg%n"/>
     
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
