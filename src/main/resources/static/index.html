@@ -135,7 +135,7 @@ pre {
 							this.pager.totalPages = response.data.totalPages;
 						}
 					}
-					$('#properties').html(!this.searchStr ? response.data.properties : response.data.properties.replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>'));
+					$('#properties').html(!this.searchStr ? response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;").replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>'));
 					//输出调试信息
 					var a=JSON.parse(JSON.stringify(this.pager));
 					delete a.properties;
@@ -172,10 +172,10 @@ pre {
 		}
 	});
 	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
-	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, lines = 2900;
+	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, lines = 500;
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail'), prefix = lines>0||scrollLock||chat.innerHTML.indexOf('\n')==-1 ? chat.innerHTML : chat.innerHTML.substr(chat.innerHTML.indexOf('\n')+1);
-		var search = $('#search').val(), text = !search ? event.data : event.data.replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
+		var search = $('#search').val(), text = !search ? event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : event.data.replace("<","&lt;").replace(">","&gt;").replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
 		chat.innerHTML = prefix + text + "\n";
 		if(scrollLock==false) chat.scrollTop = chat.scrollHeight;
 		if(--lines % 100 ==0) console.log('lines: '+lines);

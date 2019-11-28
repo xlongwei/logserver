@@ -9,7 +9,7 @@
 	var socket = new ReconnectingWebSocket(wsurl);
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail');
-		chat.innerHTML = chat.innerHTML + event.data + "\n";
+		chat.innerHTML = chat.innerHTML + event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") + "\n";
 		chat.scrollTop = chat.scrollHeight;
 	};
 </script>

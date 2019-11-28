@@ -98,7 +98,7 @@
 						}
 					}
 					//this.pager.properties = response.data.properties;
-					document.getElementById('properties').innerHTML = !this.searchStr ? response.data.properties : response.data.properties.replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>');
+					document.getElementById('properties').innerHTML = !this.searchStr ? response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;").replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>');
 					//输出调试信息
 					var a=JSON.parse(JSON.stringify(this.pager));
 					delete a.properties;
