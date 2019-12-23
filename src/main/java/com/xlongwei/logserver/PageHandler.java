@@ -1,12 +1,22 @@
 package com.xlongwei.logserver;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.aliyuncs.DefaultAcsClient;
+import com.aliyuncs.IAcsClient;
+import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
+import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
+import com.aliyuncs.profile.DefaultProfile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
@@ -26,6 +36,50 @@ public class PageHandler implements LightHttpHandler {
 	private ObjectMapper mapper = Config.getInstance().getMapper();
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
 	private Logger log = LoggerFactory.getLogger(getClass());
+	private IAcsClient client = null;
+	private boolean metricEnabled = false;
+	private LinkedList<String[]> metrics = new LinkedList<>();
+	private ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
+	
+	public PageHandler() {
+		String accessKeyId = System.getenv("accessKeyId"), secret = System.getenv("secret");
+		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret);
+		log.info("accessKeyId={}, metricEnabled={}", accessKeyId, metricEnabled);
+		if(metricEnabled) {
+			DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", accessKeyId, secret);
+			client = new DefaultAcsClient(profile);
+			scheduledService.scheduleWithFixedDelay(new Runnable() {
+				@Override
+				public void run() {
+					List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
+					String[] metric = null;
+					String time = String.valueOf(System.currentTimeMillis());
+					while((metric=metrics.pollFirst())!=null) {
+						PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
+				        metricList1.setGroupId("0");
+				        metricList1.setMetricName(metric[0]);
+				        metricList1.setValues("{\"value\":"+metric[1]+"}");
+				        metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
+				        metricList1.setTime(time);
+				        metricList1.setType("0");
+				        metricListList.add(metricList1);
+					}
+					log.info("metrics={}", metricListList.size());
+					if(metricListList.isEmpty()) {
+						return;
+					}
+					try {
+						PutCustomMetricRequest request = new PutCustomMetricRequest();
+						request.setMetricLists(metricListList);
+						PutCustomMetricResponse response = client.getAcsResponse(request);
+						log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
+					}catch(Exception e) {
+						log.warn("metrics upload failed: {}", e.getMessage());
+					}
+				}
+			}, 15, 15, TimeUnit.SECONDS);
+		}
+	}
 
 	@Override
 	public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -62,6 +116,18 @@ public class PageHandler implements LightHttpHandler {
 			}
 			response = mapper.writeValueAsString(pager);
 			log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
+			break;
+		case "metric":
+			if(metricEnabled) {
+				String metricName = getParam(exchange, "metricName");
+				String value = getParam(exchange, "value");
+				String appName = getParam(exchange, "appName");
+				if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
+					String[] metric = new String[] {metricName, value, appName};
+					metrics.offerLast(metric);
+					response = "{\"metric\":true}";
+				}
+			}
 			break;
 		default:
 			break;

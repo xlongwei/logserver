@@ -7,7 +7,8 @@ jarfile=target/logserver.jar
 JVM_OPS="-Xmx48m -Xms48m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
-#ENV_OPS="PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
+ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret="
+#ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
 
 usage(){
     echo "Usage: start.sh ( commands ... )"
@@ -17,7 +18,7 @@ usage(){
     echo "  stop        stop logserver"
     echo "  restart     stop && start"
     echo "  clean       clean target"
-    echo "  build       build logserver.jar"
+    echo "  jar       build $jarfile"
     echo "  jars        copy dependencies to target"
     echo "  package     build logser.jar and copy dependencies to target"
     echo "  rebuild     stop && build && start"
@@ -87,7 +88,7 @@ else
 	stop) stop ;;
 	restart) stop && start ;;
 	clean) clean ;;
-	build) jar ;;
+	jar) jar ;;
 	jars) dependency ;;
 	package) jar && dependency ;;
 	rebuild) stop && jar && start ;;

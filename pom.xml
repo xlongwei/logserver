@@ -88,7 +88,17 @@
         	<groupId>commons-io</groupId>
         	<artifactId>commons-io</artifactId>
         	<version>${version.commons-io}</version>
-        </dependency>		
+        </dependency>
+		<dependency>
+	       <groupId>com.aliyun</groupId>
+	       <artifactId>aliyun-java-sdk-core</artifactId>
+	       <version>3.2.6</version>
+	    </dependency>
+		<dependency>
+		  <groupId>com.aliyun</groupId>
+		  <artifactId>aliyun-java-sdk-cms</artifactId>
+		  <version>7.0.3</version>
+		</dependency>
 	</dependencies>
 
     <profiles>
