@@ -1,10 +1,10 @@
 #!/bin/sh
 
 daemon=true
-logfile=logs/all.logs
+logfile=/var/log/logserver/all.logs
 jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
-JVM_OPS="-Xmx72m -Xss228k"
+JVM_OPS="-Xmx48m -Xms48m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
 #ENV_OPS="PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
@@ -12,17 +12,17 @@ JVM_OPS="$JVM_OPS -DlogLength=2048"
 usage(){
     echo "Usage: start.sh ( commands ... )"
     echo "commands: "
-    echo "  status		check the running status"
-    echo "  start		start logserver"
-    echo "  stop		stop logserver"
-    echo "  restart		stop && start"
-    echo "  clean		clean target"
-    echo "  build		build logserver.jar"
-    echo "  jars		copy dependencies to target"
-    echo "  package		build logser.jar and copy dependencies to target"
-    echo "  rebuild		stop && build && start"
-    echo "  refresh		stop && clean && build && jars && start"
-    echo "  deploy		package all to one-fat logserver.jar"
+    echo "  status      check the running status"
+    echo "  start       start logserver"
+    echo "  stop        stop logserver"
+    echo "  restart     stop && start"
+    echo "  clean       clean target"
+    echo "  build       build logserver.jar"
+    echo "  jars        copy dependencies to target"
+    echo "  package     build logser.jar and copy dependencies to target"
+    echo "  rebuild     stop && build && start"
+    echo "  refresh     stop && clean && build && jars && start"
+    echo "  deploy      package all to one-fat logserver.jar"
 }
 
 status(){

@@ -4,3 +4,5 @@ enableHttp: true
 enableHttp2: true
 httpsPort: ${httpsPort:9443}
 enableHttps: ${enableHttps:false}
+workerThreads: ${workerThreads:8}
+alwaysSetDate: false
