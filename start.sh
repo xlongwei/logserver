@@ -4,10 +4,10 @@ daemon=true
 logfile=/var/log/logserver/all.logs
 jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
-JVM_OPS="-Xmx48m -Xms48m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
+JVM_OPS="-Xmx56m -Xms56m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
-ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret="
+ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"
 #ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
 
 usage(){
@@ -65,7 +65,7 @@ dependency(){
 }
 
 deploy(){
-	mvn package -Prelease
+	mvn package -Prelease -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
 }
 
 start(){

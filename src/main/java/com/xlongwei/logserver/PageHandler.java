@@ -3,12 +3,16 @@ package com.xlongwei.logserver;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.omg.CORBA.IntHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.utility.StringUtils;
+import com.networknt.utility.Tuple;
 import com.networknt.utility.Util;
 
 import io.undertow.server.HttpServerExchange;
@@ -39,46 +44,61 @@ public class PageHandler implements LightHttpHandler {
 	private IAcsClient client = null;
 	private boolean metricEnabled = false;
 	private LinkedList<String[]> metrics = new LinkedList<>();
+	private Map<String, Tuple<IntHolder, IntHolder>> metricsMap = new HashMap<>();
 	private ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
 	
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), secret = System.getenv("secret");
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret);
 		log.info("accessKeyId={}, metricEnabled={}", accessKeyId, metricEnabled);
-		if(metricEnabled) {
-			DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", accessKeyId, secret);
-			client = new DefaultAcsClient(profile);
-			scheduledService.scheduleWithFixedDelay(new Runnable() {
-				@Override
-				public void run() {
-					List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
-					String[] metric = null;
-					String time = String.valueOf(System.currentTimeMillis());
-					while((metric=metrics.pollFirst())!=null) {
-						PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
-				        metricList1.setGroupId("0");
-				        metricList1.setMetricName(metric[0]);
-				        metricList1.setValues("{\"value\":"+metric[1]+"}");
-				        metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
-				        metricList1.setTime(time);
-				        metricList1.setType("0");
-				        metricListList.add(metricList1);
-					}
-					log.info("metrics={}", metricListList.size());
-					if(metricListList.isEmpty()) {
-						return;
-					}
-					try {
-						PutCustomMetricRequest request = new PutCustomMetricRequest();
-						request.setMetricLists(metricListList);
-						PutCustomMetricResponse response = client.getAcsResponse(request);
-						log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
-					}catch(Exception e) {
-						log.warn("metrics upload failed: {}", e.getMessage());
-					}
+		DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", accessKeyId, secret);
+		client = new DefaultAcsClient(profile);
+		scheduledService.scheduleWithFixedDelay(new Runnable() {
+			@Override
+			public void run() {
+				List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
+				String[] metric = null;
+				String time = String.valueOf(System.currentTimeMillis());
+				while((metric=metrics.pollFirst())!=null) {
+					PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
+			        metricList1.setGroupId("0");
+			        metricList1.setMetricName(metric[0]);
+			        metricList1.setValues("{\"value\":"+metric[1]+"}");
+			        metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
+			        metricList1.setTime(time);
+			        metricList1.setType("0");
+			        metricListList.add(metricList1);
+			        //add metric to metricsMap
+			        try {
+			        	Integer value = Integer.valueOf(metric[1]);
+			        	if(value.intValue() > 0) {
+					        String key = metric[0]+"."+metric[2];
+					        Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
+					        if(tuple == null) {
+					        	metricsMap.put(key, new Tuple<>(new IntHolder(1), new IntHolder(value)));
+					        }else {
+					        	tuple.first.value += 1;
+					        	tuple.second.value += value;
+					        }
+			        	}
+			        }catch(Exception e) {
+			        	//ignore
+			        }
 				}
-			}, 15, 15, TimeUnit.SECONDS);
-		}
+				log.info("metrics={}", metricListList.size());
+				if(metricListList.isEmpty() || metricEnabled==false) {
+					return;
+				}
+				try {
+					PutCustomMetricRequest request = new PutCustomMetricRequest();
+					request.setMetricLists(metricListList);
+					PutCustomMetricResponse response = client.getAcsResponse(request);
+					log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
+				}catch(Exception e) {
+					log.warn("metrics upload failed: {}", e.getMessage());
+				}
+			}
+		}, 15, 15, TimeUnit.SECONDS);
 	}
 
 	@Override
@@ -118,15 +138,22 @@ public class PageHandler implements LightHttpHandler {
 			log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
 			break;
 		case "metric":
-			if(metricEnabled) {
-				String metricName = getParam(exchange, "metricName");
-				String value = getParam(exchange, "value");
-				String appName = getParam(exchange, "appName");
-				if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
-					String[] metric = new String[] {metricName, value, appName};
-					metrics.offerLast(metric);
-					response = "{\"metric\":true}";
+			String metricName = getParam(exchange, "metricName");
+			String value = getParam(exchange, "value");
+			String appName = getParam(exchange, "appName");
+			if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
+				String[] metric = new String[] {metricName, value, appName};
+				metrics.offerLast(metric);
+				response = "{\"metric\":true}";
+			}else {
+				Map<String, Integer> map = new TreeMap<>();
+				for(String key : metricsMap.keySet()) {
+					Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
+					Integer avg = tuple.second.value / tuple.first.value;
+					map.put(key, avg);
 				}
+				response = mapper.writeValueAsString(map);
+				log.info("{}", response);
 			}
 			break;
 		default:
