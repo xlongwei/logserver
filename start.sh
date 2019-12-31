@@ -25,6 +25,7 @@ usage(){
     echo "  rebuild     stop && build && start"
     echo "  refresh     stop && clean && build && jars && start"
     echo "  deploy      package all to one-fat logserver.jar"
+    echo "  redeploy    package all to one-fat logserver.jar and restart"
 }
 
 status(){
@@ -94,6 +95,7 @@ else
 	rebuild) stop && jar && start ;;
 	refresh) stop && clean && jar && dependency && start ;;
 	deploy) deploy ;;
+	redeploy) stop && deploy && start ;;
 	*) usage ;;
 	esac
 fi

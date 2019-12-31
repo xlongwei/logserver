@@ -1,9 +1,8 @@
 package com.xlongwei.logserver;
 
 import java.io.Serializable;
-import java.time.LocalDate;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -103,7 +102,9 @@ public class PageHandler implements LightHttpHandler {
 			}
 		}, 15, 15, TimeUnit.SECONDS);
 		//每4个小时清理一下统计数据
-		long minuteOfDay = LocalDate.now().get(ChronoField.MINUTE_OF_DAY), range = 4*60, minuteToWait = range - (minuteOfDay%range);
+		Calendar calendar = Calendar.getInstance();
+		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
+		log.info("metrics map wait {} minutes to clear", minuteToWait);
 		scheduledService.scheduleWithFixedDelay(new Runnable() {
 			@Override
 			public void run() {
