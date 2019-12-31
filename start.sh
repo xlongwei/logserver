@@ -8,6 +8,7 @@ JVM_OPS="-Xmx56m -Xms56m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
 ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"
+ENV_OPS="$ENV_OPS workerThreads=3 enableHttps=false"
 #ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
 
 usage(){
@@ -71,7 +72,6 @@ deploy(){
 start(){
 	echo "starting logserver ..."
 	JVM_OPS="-server -Djava.awt.headless=true $JVM_OPS"
-	ENV_OPS="$ENV_OPS enableHttps=false"
 	if [ "$daemon" = "true" ]; then
 		env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -jar $jarfile >> /dev/null 2>&1 &
 	else

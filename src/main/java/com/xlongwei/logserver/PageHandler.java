@@ -1,6 +1,8 @@
 package com.xlongwei.logserver;
 
 import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -70,7 +72,8 @@ public class PageHandler implements LightHttpHandler {
 			        metricListList.add(metricList1);
 			        //add metric to metricsMap
 			        try {
-			        	Integer value = Integer.valueOf(metric[1]);
+			        	int dot = metric[1].indexOf('.');
+			        	Integer value = Integer.valueOf(dot==-1 ? metric[1] : metric[1].substring(0, dot));
 			        	if(value.intValue() > 0) {
 					        String key = metric[0]+"."+metric[2];
 					        Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
@@ -99,6 +102,15 @@ public class PageHandler implements LightHttpHandler {
 				}
 			}
 		}, 15, 15, TimeUnit.SECONDS);
+		//每4个小时清理一下统计数据
+		long minuteOfDay = LocalDate.now().get(ChronoField.MINUTE_OF_DAY), range = 4*60, minuteToWait = range - (minuteOfDay%range);
+		scheduledService.scheduleWithFixedDelay(new Runnable() {
+			@Override
+			public void run() {
+				log.info("metrics map clear");
+				metricsMap.clear();
+			}
+		}, minuteToWait, range, TimeUnit.MINUTES);
 	}
 
 	@Override
