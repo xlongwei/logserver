@@ -12,6 +12,10 @@
 		<ReconnectionDelay>10000</ReconnectionDelay>
 		<IncludeCallerData>false</IncludeCallerData>
 	</appender>
+	<appender name="ASYNC_SOCKET" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="SOCKET" />
+		<IncludeCallerData>true</IncludeCallerData>
+	</appender>	
     <root level="DEBUG">
     	<appender-ref ref="SOCKET"/>
     </root>
