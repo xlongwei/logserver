@@ -34,7 +34,8 @@ import com.networknt.utility.Util;
  */
 public class ExecUtil {
 	public static boolean isWindows = OS.isFamilyWindows();
-	public static String logs = StringUtils.isNotBlank(System.getProperty("logfile")) ? System.getProperty("logfile") : "logs/all.logs", dir = new File(logs).getParent();
+	public static String logs = firstNotBlank(System.getProperty("logfile"), "logs/all.logs"), dir = new File(logs).getParent();
+	public static String cert = firstNotBlank(System.getProperty("certdir"), "/soft/cert");
 	private static Logger log = LoggerFactory.getLogger(ExecUtil.class);
 	
 	/** 按日期排倒序，all.logs按当天排首位 */
@@ -251,4 +252,16 @@ public class ExecUtil {
 			return "";
 		}
 	}
+	
+	public static String firstNotBlank(String ... strs) {
+		if(strs!=null && strs.length>0) {
+			for(String str : strs) {
+				if(StringUtils.isNotBlank(str)) {
+					return str;
+				}
+			}
+		}
+		return null;
+	}
+	
 }

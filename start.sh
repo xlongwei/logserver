@@ -4,7 +4,7 @@ daemon=true
 logfile=/var/log/logserver/all.logs
 jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
-JVM_OPS="-Xmx56m -Xms56m -XX:NewSize=24m -XX:MaxNewSize=24m -Xss228k"
+JVM_OPS="-Xmx72m -Xms72m -XX:NewSize=40m -XX:MaxNewSize=40m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
 ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"

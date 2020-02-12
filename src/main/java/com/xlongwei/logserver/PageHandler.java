@@ -1,6 +1,8 @@
 package com.xlongwei.logserver;
 
+import java.io.File;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Deque;
@@ -13,6 +15,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.omg.CORBA.IntHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +52,7 @@ public class PageHandler implements LightHttpHandler {
 	private LinkedList<String[]> metrics = new LinkedList<>();
 	private Map<String, Tuple<IntHolder, IntHolder>> metricsMap = new HashMap<>();
 	private ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
+	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
 	
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), secret = System.getenv("secret");
@@ -169,6 +175,9 @@ public class PageHandler implements LightHttpHandler {
 				log.info("{}", response);
 			}
 			break;
+		case "https":
+			response = https(exchange);
+			break;
 		default:
 			break;
 		}
@@ -179,6 +188,83 @@ public class PageHandler implements LightHttpHandler {
 		}
 	}
 	
+	private String https(HttpServerExchange exchange) throws Exception {
+		String step = getParam(exchange, "step"), param = getParam(exchange, "param");
+		if(StringUtils.isNotBlank(step)) {
+			String cmd = null, data = null;
+			switch(step) {
+			case "validateAccount":
+				if(new File(ExecUtil.cert, "account.key").exists()==false) {
+					ExecUtil.exec(ExecUtil.cert, CommandLine.parse("openssl genrsa 4096 > account.key"));
+				}
+				cmd = "openssl rsa -in account.key -pubout";
+				data = ExecUtil.exec(ExecUtil.cert, CommandLine.parse(cmd));
+				data = data.substring(data.indexOf('-'));
+				break;
+			case "validateCSR":
+				if(new File(ExecUtil.cert, "domain.key").exists()==false) {
+					ExecUtil.exec(ExecUtil.cert, CommandLine.parse("openssl genrsa 4096 > domain.key"));
+				}
+				if(StringUtils.isNotBlank(param)) {
+					StringBuilder sb = new StringBuilder("#! /bin/bash\nopenssl req -new -sha256 -key domain.key -subj \"/\" -reqexts SAN -config <(cat /etc/pki/tls/openssl.cnf <(printf \"\\n[SAN]\\nsubjectAltName=");
+					for(String domain : param.split("[,;]")) {
+						if(StringUtils.isBlank(domain=domain.trim())){
+							continue;
+						}
+						sb.append("DNS:").append(domain).append(",");
+					}
+					sb.deleteCharAt(sb.length()-1).append("\"))");
+					File csr = new File(ExecUtil.cert, "csr.sh");
+					FileUtils.writeStringToFile(csr, sb.toString(), StandardCharsets.UTF_8);
+					ExecUtil.exec(ExecUtil.cert, CommandLine.parse("chmod +x ./csr.sh"));
+					data = ExecUtil.exec(ExecUtil.cert, CommandLine.parse("bash csr.sh"));
+				}
+				break;
+			case "signApiRequests":
+				if(StringUtils.isNotBlank(param)) {
+					if(param.matches("^(PRIV_KEY=\\./)(account|domain)\\.key; echo -n .*( | openssl dgst -sha256 -hex -sign \\$PRIV_KEY)$")) {
+						data = runtime(param);
+					}else {
+						log.info("bad param: {}", param);
+					}
+				}
+				break;
+			case "serveThisContent":
+				if(StringUtils.isNotBlank(param)) {
+					int dot = param.indexOf('.');
+					if(dot>0) {
+						File file = new File(wellKnown, param.substring(0, dot));
+						FileUtils.writeStringToFile(file, param, StandardCharsets.UTF_8);
+						data = String.valueOf(file.exists());
+					}
+				}
+				break;
+			default:
+				break;
+			}
+			if(StringUtils.isNotBlank(data)) {
+				data = data.replaceAll("\n", "\\\\n").replaceAll("\r", "\\\\r");
+				return "{\"data\":\""+data+"\"}";
+			}
+		}
+		return null;
+	}
+
+	private String runtime(String cmd) {
+		String data = null;
+		try{
+			log.info("exec cmd: {}", cmd);
+			Process exec = Runtime.getRuntime().exec(new String[] {"sh","-c",cmd}, null, new File(ExecUtil.cert));
+			data = IOUtils.toString(exec.getInputStream(), StandardCharsets.UTF_8);
+			log.info("exec result: {}", data);
+			exec.waitFor(3, TimeUnit.SECONDS);
+			exec.destroy();
+		}catch(Exception e) {
+			log.info("fail to exec cmd: {}", e.getMessage());
+		}
+		return data;
+	}
+
 	public static String getParam(HttpServerExchange exchange, String name) {
 		Deque<String> deque = exchange.getQueryParameters().get(name);
 		if(deque!=null && deque.size()==1) {
