@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,9 +25,14 @@ import org.slf4j.LoggerFactory;
 
 import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
+import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsRequest;
+import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsResponse;
+import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsResponse.Record;
+import com.aliyuncs.alidns.model.v20150109.UpdateDomainRecordRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
 import com.aliyuncs.profile.DefaultProfile;
+import com.aliyuncs.profile.IClientProfile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
@@ -48,76 +54,76 @@ public class PageHandler implements LightHttpHandler {
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
 	private Logger log = LoggerFactory.getLogger(getClass());
 	private IAcsClient client = null;
+	private IClientProfile profile = null;
 	private boolean metricEnabled = false;
+	private String domainName = ExecUtil.firstNotBlank(System.getenv("domainName"), "xlongwei.com");
+	private String recordId = ExecUtil.firstNotBlank(System.getenv("recordId"), "4012091293697024");
 	private LinkedList<String[]> metrics = new LinkedList<>();
 	private Map<String, Tuple<IntHolder, IntHolder>> metricsMap = new HashMap<>();
 	private ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
 	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
 	
 	public PageHandler() {
-		String accessKeyId = System.getenv("accessKeyId"), secret = System.getenv("secret");
-		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret);
-		log.info("accessKeyId={}, metricEnabled={}", accessKeyId, metricEnabled);
-		DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", accessKeyId, secret);
-		client = new DefaultAcsClient(profile);
-		scheduledService.scheduleWithFixedDelay(new Runnable() {
-			@Override
-			public void run() {
-				List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
-				String[] metric = null;
-				String time = String.valueOf(System.currentTimeMillis());
-				while((metric=metrics.pollFirst())!=null) {
-					PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
-			        metricList1.setGroupId("0");
-			        metricList1.setMetricName(metric[0]);
-			        metricList1.setValues("{\"value\":"+metric[1]+"}");
-			        metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
-			        metricList1.setTime(time);
-			        metricList1.setType("0");
-			        metricListList.add(metricList1);
-			        //add metric to metricsMap
-			        try {
-			        	int dot = metric[1].indexOf('.');
-			        	Integer value = Integer.valueOf(dot==-1 ? metric[1] : metric[1].substring(0, dot));
-			        	if(value.intValue() > 0) {
-					        String key = metric[0]+"."+metric[2];
-					        Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
-					        if(tuple == null) {
-					        	metricsMap.put(key, new Tuple<>(new IntHolder(1), new IntHolder(value)));
-					        }else {
-					        	tuple.first.value += 1;
-					        	tuple.second.value += value;
-					        }
-			        	}
-			        }catch(Exception e) {
-			        	//ignore
-			        }
-				}
-				log.info("metrics={}", metricListList.size());
-				if(metricListList.isEmpty() || metricEnabled==false) {
-					return;
-				}
-				try {
-					PutCustomMetricRequest request = new PutCustomMetricRequest();
-					request.setMetricLists(metricListList);
-					PutCustomMetricResponse response = client.getAcsResponse(request);
-					log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
-				}catch(Exception e) {
-					log.warn("metrics upload failed: {}", e.getMessage());
-				}
-			}
+		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
+		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
+		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}", accessKeyId, metricEnabled, regionId, recordId);
+		client = new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
+		scheduledService.scheduleWithFixedDelay(() -> {
+				putCustomMetrics();
 		}, 15, 15, TimeUnit.SECONDS);
 		//每4个小时清理一下统计数据
 		Calendar calendar = Calendar.getInstance();
 		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
 		log.info("metrics map wait {} minutes to clear", minuteToWait);
-		scheduledService.scheduleWithFixedDelay(new Runnable() {
-			@Override
-			public void run() {
+		scheduledService.scheduleWithFixedDelay(() -> {
 				log.info("metrics map clear");
 				metricsMap.clear();
-			}
 		}, minuteToWait, range, TimeUnit.MINUTES);
+	}
+
+	private void putCustomMetrics() {
+		List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
+		String[] metric = null;
+		String time = String.valueOf(System.currentTimeMillis());
+		while((metric=metrics.pollFirst())!=null) {
+			PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
+		    metricList1.setGroupId("0");
+		    metricList1.setMetricName(metric[0]);
+		    metricList1.setValues("{\"value\":"+metric[1]+"}");
+		    metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
+		    metricList1.setTime(time);
+		    metricList1.setType("0");
+		    metricListList.add(metricList1);
+		    //add metric to metricsMap
+		    try {
+		    	int dot = metric[1].indexOf('.');
+		    	Integer value = Integer.valueOf(dot==-1 ? metric[1] : metric[1].substring(0, dot));
+		    	if(value.intValue() > 0) {
+			        String key = metric[0]+"."+metric[2];
+			        Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
+			        if(tuple == null) {
+			        	metricsMap.put(key, new Tuple<>(new IntHolder(1), new IntHolder(value)));
+			        }else {
+			        	tuple.first.value += 1;
+			        	tuple.second.value += value;
+			        }
+		    	}
+		    }catch(Exception e) {
+		    	//ignore
+		    }
+		}
+		if(metricListList.isEmpty() || metricEnabled==false) {
+			return;
+		}
+		try {
+			log.info("metrics={}", metricListList.size());
+			PutCustomMetricRequest request = new PutCustomMetricRequest();
+			request.setMetricLists(metricListList);
+			PutCustomMetricResponse response = client.getAcsResponse(request);
+			log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
+		}catch(Exception e) {
+			log.warn("metrics upload failed: {}", e.getMessage());
+		}
 	}
 
 	@Override
@@ -163,7 +169,7 @@ public class PageHandler implements LightHttpHandler {
 			if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
 				String[] metric = new String[] {metricName, value, appName};
 				metrics.offerLast(metric);
-				response = "{\"metric\":true}";
+				response = "{\"metric\":"+metricEnabled+"}";
 			}else {
 				Map<String, Integer> map = new TreeMap<>();
 				for(String key : metricsMap.keySet()) {
@@ -239,6 +245,11 @@ public class PageHandler implements LightHttpHandler {
 					}
 				}
 				break;
+			case "alidns":
+				if(StringUtils.isNotBlank(param)) {
+					data = alidns(param);
+				}
+				break;
 			default:
 				break;
 			}
@@ -248,6 +259,32 @@ public class PageHandler implements LightHttpHandler {
 			}
 		}
 		return null;
+	}
+	
+	private String alidns(String value) {
+		try {
+			if("true".equals(value) || value.startsWith("false")) {
+				DescribeDomainRecordsRequest request = new DescribeDomainRecordsRequest();
+		        request.setRegionId(profile.getRegionId());
+		        request.setDomainName(domainName);
+		        DescribeDomainRecordsResponse response = client.getAcsResponse(request);
+		        List<Record> records = response.getDomainRecords();
+		        Optional<String> record = records.stream().filter(r -> recordId.equals(r.getRecordId())).map(r -> r.getValue()).findFirst();
+		        return record.orElse("false");
+			}else {
+		        UpdateDomainRecordRequest request = new UpdateDomainRecordRequest();
+		        request.setRegionId(profile.getRegionId());
+		        request.setRecordId(recordId);
+		        request.setRR("_acme-challenge");
+		        request.setType("TXT");
+		        request.setValue(value);
+		        client.getAcsResponse(request);
+		        return "true";
+			}
+		}catch(Exception e) {
+			log.info("alidns fail: {}", e.getMessage());
+			return "false: " + e.getMessage();
+		}
 	}
 
 	private String runtime(String cmd) {

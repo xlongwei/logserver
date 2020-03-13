@@ -7,7 +7,8 @@ jarfile=target/logserver.jar
 JVM_OPS="-Xmx72m -Xms72m -XX:NewSize=40m -XX:MaxNewSize=40m -Xss228k"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
-ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"
+#ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"
+#ENV_OPS="regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
 ENV_OPS="$ENV_OPS workerThreads=3 enableHttps=false"
 #ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
 
