@@ -15,6 +15,7 @@
 2. 运行服务：sh start.sh start，也可以java -jar target/logserver.jar
 3. 其他项目的日志配置参考client.xml，或者参考[light4j](https://gitee.com/xlongwei/light4j/blob/master/src/main/resources/logback.xml)
 4. -Dlogfile=logs/all.logs 日志路径，logserver自身日志输出到Console，其他client应用日志输出到logfile
+5. -Djava.compiler=none，禁用JIT可节约内存，默认启用JIT可提高性能
 
 ##### 演示图
 
