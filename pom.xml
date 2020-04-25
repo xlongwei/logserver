@@ -64,17 +64,18 @@
 				</exclusion>
 				<exclusion>
 					<groupId>com.networknt</groupId>
-					<artifactId>body</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.networknt</groupId>
 					<artifactId>balance</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
         <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>cors</artifactId>
+            <version>${version.light-4j}</version>
+        </dependency>		
+        <dependency>
             <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-examples</artifactId>
+            <artifactId>logback-classic</artifactId>
             <version>${version.logback}</version>
         </dependency>		
 		<dependency>

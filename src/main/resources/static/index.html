@@ -73,6 +73,8 @@ pre {
 <script src="https://cdn.bootcss.com/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
 <script src="https://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.bootcss.com/twitter-bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<!-- <script src="https://eshengsky.github.io/lajax/dist/build.min.js"></script> -->
+<script src="/lajax.min.js"></script>
 <script type="text/javascript">
 	new Vue({
 		el : '.container-fluid',
@@ -176,10 +178,26 @@ pre {
 	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, lines = 500;
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail'), prefix = lines>0||scrollLock||chat.innerHTML.indexOf('\n')==-1 ? chat.innerHTML : chat.innerHTML.substr(chat.innerHTML.indexOf('\n')+1);
-		var search = $('#search').val(), text = !search ? event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : event.data.replace("<","&lt;").replace(">","&gt;").replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
-		chat.innerHTML = prefix + text + "\n";
+		var search = $('#search').val(), hasSearch = search&&event.data.indexOf(search)>=0, text = !search ? event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : event.data.replace("<","&lt;").replace(">","&gt;").replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
+		if(scrollLock==false || (hasSearch)) chat.innerHTML = prefix + text + "\n";
 		if(scrollLock==false) chat.scrollTop = chat.scrollHeight;
 		if(--lines % 100 ==0) console.log('lines: '+lines);
 	};	
+	var logger = new Lajax({
+		url:'/lajax',//日志服务器的 URL
+		autoLogError:false,//是否自动记录未捕获错误true
+		autoLogRejection:false,//是否自动记录Promise错误true
+		autoLogAjax:false,//是否自动记录 ajax 请求true
+		logAjaxFilter:function(ajaxUrl, ajaxMethod) {
+			return false;//ajax 自动记录条件过滤函数true记录false不记录
+		},
+		stylize:false,//是否要格式化 console 打印的内容true
+		showDesc:false,//是否显示初始化描述信息true
+		//customDesc:function(lastUnsend, reqId, idFromServer) {
+		//	return 'lajax 前端日志模块加载完成。';
+		//},
+		interval: 3000,//日志发送到服务端的间隔时间10000毫秒
+		maxErrorReq:5 //发送日志请求连续出错的最大次数
+	});
 </script>
 </html>

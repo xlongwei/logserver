@@ -2,9 +2,20 @@ enabled: true
 
 handlers:
   - com.xlongwei.logserver.PathHandlerProvider@path
+  - com.networknt.body.BodyHandler@body
+  - com.xlongwei.logserver.LajaxHandler@lajax
 
 paths:
   - path: '/*'
     method: 'GET'
     exec:
       - path
+  - path: '/lajax'
+    method: 'POST'
+    exec:
+      - body
+      - lajax
+  - path: '/lajax'
+    method: 'OPTIONS'
+    exec:
+      - lajax

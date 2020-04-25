@@ -17,6 +17,10 @@
 4. -Dlogfile=logs/all.logs 日志路径，logserver自身日志输出到Console，其他client应用日志输出到logfile
 5. -Djava.compiler=none，禁用JIT可节约内存，默认启用JIT可提高性能
 
+#### 前端日志
+
+[lajax](https://github.com/eshengsky/lajax)：var logger = new Lajax(url); logger.info(arg1,...args);
+
 ##### 演示图
 
 演示地址：[https://log.xlongwei.com/](https://log.xlongwei.com/)
