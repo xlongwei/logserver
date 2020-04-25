@@ -10,17 +10,19 @@ import com.networknt.body.BodyHandler;
 import com.networknt.cors.CorsHeaders;
 import com.networknt.cors.CorsUtil;
 import com.networknt.handler.LightHttpHandler;
+import com.networknt.utility.StringUtils;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 
 public class LajaxHandler implements LightHttpHandler {
 	private static Logger log = LoggerFactory.getLogger("lajax");
+	private static String token = System.getProperty("lajax.token");
 	
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void handleRequest(HttpServerExchange exchange) throws Exception {
-		if(!CorsUtil.isPreflightedRequest(exchange)) {
+		if(!CorsUtil.isPreflightedRequest(exchange) && (StringUtils.isBlank(token) || token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token")))) {
 			Object body = exchange.getAttachment(BodyHandler.REQUEST_BODY);
 			//[{time,level,messages:["{reqId}",arg1,...args],url,agent}]
 			try {
