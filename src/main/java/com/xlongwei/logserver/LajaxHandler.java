@@ -27,17 +27,21 @@ public class LajaxHandler implements LightHttpHandler {
 			//[{time,level,messages:["{reqId}",arg1,...args],url,agent}]
 			try {
 				((List)body).forEach(item -> {
-					String level = (String)((Map)item).get("level");
+					Map map = (Map)item;
+					String level = (String)(map).get("level");
+					List list = (List)map.get("messages");
+					String reqId = list.get(0).toString(), message = list.get(1).toString();
+					reqId = reqId.substring(1, reqId.length()-1);
 					if("info".equals(level)) {
-						log.info("{}", item);
+						log.info("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
 					}else if("warn".equals(level)) {
-						log.warn("{}", item);
+						log.warn("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
 					}else {
-						log.error("{}", item);
+						log.error("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
 					}
 				});
 			}catch(Exception e) {
-				log.debug("{}, {}", e.getMessage(), body);
+				log.debug("lajax fail={}, body={}", e.getMessage(), body);
 			}
 		}
 		setCorsHeaders(exchange);
