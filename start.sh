@@ -1,6 +1,7 @@
 #!/bin/sh
 
 daemon=true
+#filebeat=filebeat.log,filebeat2.log
 logfile=/var/log/logserver/all.logs
 jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
@@ -77,9 +78,17 @@ start(){
 	echo "starting logserver ..."
 	JVM_OPS="-server -Djava.awt.headless=true $JVM_OPS"
 	if [ "$daemon" = "true" ]; then
-		env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -jar $jarfile >> /dev/null 2>&1 &
+		if [ -z "$filebeat" ]; then
+			env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -jar $jarfile >> /dev/null 2>&1 &
+		else
+			env $ENV_OPS setsid java $JVM_OPS -Dlogfile=$logfile -Dfilebeat=$filebeat -cp $jarfile com.xlongwei.logserver.FileBeat >> /dev/null 2>&1 &
+		fi
 	else
-		env $ENV_OPS java $JVM_OPS -jar $jarfile 2>&1
+		if [ -z "$filebeat" ]; then
+			env $ENV_OPS java $JVM_OPS -jar $jarfile 2>&1
+		else
+			env $ENV_OPS java $JVM_OPS -Dfilebeat=$filebeat -cp $jarfile com.xlongwei.logserver.FileBeat 2>&1
+		fi
 	fi
 }
 

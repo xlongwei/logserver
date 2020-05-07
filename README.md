@@ -17,18 +17,7 @@
 4. -Dlogfile=logs/all.logs 日志路径，logserver自身日志输出到Console，其他client应用日志输出到logfile
 5. -Djava.compiler=none，禁用JIT可节约内存，默认启用JIT可提高性能
 6. 定时压缩日志（logserver不再搜索），56 23 * * * sh /soft/shells/[tgz_logs.sh](https://gitee.com/xlongwei/logserver/blob/master/aliyun/tgz_logs.sh) >> /var/log/mycron_clears.log，
-
->
-	<appender name="SOCKET" class="ch.qos.logback.classic.net.SocketAppender">
-		<RemoteHost>logserver</RemoteHost>
-		<Port>6000</Port>
-		<ReconnectionDelay>10000</ReconnectionDelay>
-		<IncludeCallerData>false</IncludeCallerData>
-	</appender>
-	<appender name="ASYNC_SOCKET" class="ch.qos.logback.classic.AsyncAppender">
-		<appender-ref ref="SOCKET" />
-		<IncludeCallerData>true</IncludeCallerData>
-	</appender>
+7. filebeat模式：vi start.sh，打开filebeat注释，用于跟踪多个日志文件，并发送日志内容到logserver
 
 #### 前端日志
 
