@@ -10,11 +10,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
@@ -33,6 +36,7 @@ import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
@@ -40,6 +44,8 @@ import com.networknt.utility.StringUtils;
 import com.networknt.utility.Tuple;
 import com.networknt.utility.Util;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.MimeMappings;
@@ -129,68 +135,111 @@ public class PageHandler implements LightHttpHandler {
 	@Override
 	public void handleRequest(HttpServerExchange exchange) throws Exception {
 		String type = getParam(exchange, "type");
-		String search = getParam(exchange, "search");
 		String response = null;
-		switch (type) {
-		case "list":
-			List<String> list = ExecUtil.list(search);
-			response = mapper.writeValueAsString(list);
-			log.info("page logs list: {}", search);
-			break;
-		case "page":
-			String logs = getParam(exchange, "log");
-			Pager pager = new Pager();
-			pager.setPageSize(getParam(exchange, "pageSize"), 100);
-			int totalRows = Util.parseInteger(getParam(exchange, "totalRows"));
-			if(totalRows < 1) {
-				totalRows = ExecUtil.count(logs);
-			}
-			pager.init(totalRows);
-			pager.page(Util.parseInteger(getParam(exchange, "currentPage")));
-			//点击尾页可以刷新
-			if(pager.getTotalPages()>1 && pager.getCurrentPage()==pager.getTotalPages()) {
-				pager.init(ExecUtil.count(logs));
-			}
-			String page = ExecUtil.page(logs, pager.getStartRow(), pager.getEndRow());
-			pager.setProperties(page);
-			//搜索search所在页码列表
-			if(StringUtils.isNotBlank(search)) {
-				List<Integer> lines = ExecUtil.lines(logs, search);
-				List<Integer[]> pages = ExecUtil.pages(lines, pager.getPageSize());
-				pager.setOthers(pages);
-			}
-			response = mapper.writeValueAsString(pager);
-			log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
-			break;
-		case "metric":
-			String metricName = getParam(exchange, "metricName");
-			String value = getParam(exchange, "value");
-			String appName = getParam(exchange, "appName");
-			if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
-				String[] metric = new String[] {metricName, value, appName};
-				metrics.offerLast(metric);
-				response = "{\"metric\":"+metricEnabled+"}";
-			}else {
-				Map<String, Integer> map = new TreeMap<>();
-				for(String key : metricsMap.keySet()) {
-					Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
-					Integer avg = tuple.second.value / tuple.first.value;
-					map.put(key, avg);
-				}
-				response = mapper.writeValueAsString(map);
-				log.info("{}", response);
-			}
-			break;
-		case "https":
+		if("list".equals(type)) {
+			response = list(exchange);
+		}else if("page".equals(type)) {
+			response = page(exchange);
+		}else if("metric".equals(type)) {
+			response = metric(exchange);
+		}else if("https".equals(type)) {
 			response = https(exchange);
-			break;
-		default:
-			break;
+		}else {
+			response = logger(exchange);
 		}
-		if (response != null) {
-			exchange.setStatusCode(200);
-			exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, json);
-			exchange.getResponseSender().send(response);
+		exchange.setStatusCode(200);
+		exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, json);
+		exchange.getResponseSender().send(StringUtils.trimToEmpty(response));
+	}
+
+	private String logger(HttpServerExchange exchange) throws JsonProcessingException {
+		Map<String, Deque<String>> queryParameters = exchange.getQueryParameters();
+		Deque<String> loggerParams = queryParameters.get("logger");
+		List<ch.qos.logback.classic.Logger> loggers = null;
+		if(loggerParams!=null && loggerParams.size()>0) {
+			Set<String> loggerNames = loggerParams.stream().map(loggerName -> StringUtils.trimToEmpty(loggerName)).collect(Collectors.toSet());
+			if(!loggerNames.isEmpty()) {
+				loggers = loggerNames.stream().map(loggerName -> (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(loggerName)).filter(logger -> logger!=null).collect(Collectors.toList());
+				if(!loggers.isEmpty()) {
+					Deque<String> levelParams = queryParameters.get("level");
+					if(levelParams!=null && levelParams.size()>0) {
+						String levelName = levelParams.getFirst();
+						Level level = Level.toLevel(levelName, null);
+						loggers.forEach(logger -> {
+							log.info("change logger:{} level from:{} to:{}", logger.getName(), logger.getLevel(), level);
+							logger.setLevel(level);
+						});
+					}
+				}
+			}
+		}
+		if(loggers == null) {
+			LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
+			loggers = lc.getLoggerList();
+		}
+		log.info("check logger level, loggers:{}", loggers.size());
+		List<Map<String, String>> list = loggers.stream().sorted((a, b) -> a.getName().compareTo(b.getName()))
+				.map(logger -> {
+					Map<String, String> map = new HashMap<>();
+					map.put("logger", logger.getName());
+					map.put("level", Objects.toString(logger.getLevel(), ""));
+					return map;
+				}).collect(Collectors.toList());
+		Map<String, Object> map = new HashMap<>();
+		map.put("loggers", list);
+		return mapper.writeValueAsString(map);
+	}
+
+	private String list(HttpServerExchange exchange) throws JsonProcessingException {
+		String search = getParam(exchange, "search");
+		List<String> list = ExecUtil.list(search);
+		log.info("page logs list: {}", search);
+		return mapper.writeValueAsString(list);
+	}
+
+	private String page(HttpServerExchange exchange) throws JsonProcessingException {
+		String search = getParam(exchange, "search");
+		String logs = getParam(exchange, "log");
+		Pager pager = new Pager();
+		pager.setPageSize(getParam(exchange, "pageSize"), 100);
+		int totalRows = Util.parseInteger(getParam(exchange, "totalRows"));
+		if(totalRows < 1) {
+			totalRows = ExecUtil.count(logs);
+		}
+		pager.init(totalRows);
+		pager.page(Util.parseInteger(getParam(exchange, "currentPage")));
+		//点击尾页可以刷新
+		if(pager.getTotalPages()>1 && pager.getCurrentPage()==pager.getTotalPages()) {
+			pager.init(ExecUtil.count(logs));
+		}
+		String page = ExecUtil.page(logs, pager.getStartRow(), pager.getEndRow());
+		pager.setProperties(page);
+		//搜索search所在页码列表
+		if(StringUtils.isNotBlank(search)) {
+			List<Integer> lines = ExecUtil.lines(logs, search);
+			List<Integer[]> pages = ExecUtil.pages(lines, pager.getPageSize());
+			pager.setOthers(pages);
+		}
+		log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
+		return mapper.writeValueAsString(pager);
+	}
+
+	private String metric(HttpServerExchange exchange) throws JsonProcessingException {
+		String metricName = getParam(exchange, "metricName");
+		String value = getParam(exchange, "value");
+		String appName = getParam(exchange, "appName");
+		if(StringUtils.isNotBlank(metricName) && StringUtils.isNotBlank(appName) && StringUtils.isNotBlank(value)) {
+			String[] metric = new String[] {metricName, value, appName};
+			metrics.offerLast(metric);
+			return "{\"metric\":"+metricEnabled+"}";
+		}else {
+			Map<String, Integer> map = new TreeMap<>();
+			for(String key : metricsMap.keySet()) {
+				Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
+				Integer avg = tuple.second.value / tuple.first.value;
+				map.put(key, avg);
+			}
+			return mapper.writeValueAsString(map);
 		}
 	}
 	

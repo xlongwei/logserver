@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>logger</title>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-xs-12">
+			<select class="form-control" @change="changeUrl">
+				<option v-for="app in urls" :value="app.url">{{app.appName}}</option>
+			</select>
+		</div>
+	</div>
+	<div class="row" v-for="log in logs">
+		<div class="col-xs-10">
+			<input class="form-control" value="{{log.logger}}">
+		</div>
+		<div class="col-xs-2">
+			<select class="form-control" @change="changeLevel">
+				<option v-for="level in levels" value="{{log.logger}}={{level}}" :selected="level == log.level">{{level}}</option>
+			</select>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-10">
+			<input class="form-control" placeholder="input logger name" id="logger">
+		</div>
+		<div class="col-xs-2">
+			<select class="form-control" @change="changeLevel">
+				<option v-for="level in levels" value="={{level}}" :selected="level == ''">{{level}}</option>
+			</select>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-xs-12 text-center">
+			{{logs.length}} loggers
+		</div>
+	</div>
+<div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.18/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/0.7.0/vue-resource.js"></script>
+<script type="text/javascript">
+	new Vue({
+		el : '.container-fluid',
+		data: {
+			logs: [{"logger":"ROOT","level":"DEBUG"}],
+			url: '/log',
+			//urls: [{"appName":"logserver","url":"https://log.xlongwei.com/log"},{"appName":"light4j","url":"https://api.xlongwei.com/demo/log"},{"appName":"cms","url":"http://cms.xlongwei.com/demo/log.json"},{"appName":"apidoc","url":"https://api.xlongwei.com/apidoc/demo/log.json"}],
+			urls: [{"appName":"logserver","url":"http://localhost:9880/log"},{"appName":"light4j","url":"http://localhost:8080/demo/log"},{"appName":"cms","url":"http://localhost:8081/demo/log.json"},{"appName":"apidoc","url":"http://localhost:8081/apidoc/demo/log.htm"}],
+			levels: ['', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'TRACE', 'ALL', 'OFF']
+		},
+		methods: {
+			changeUrl: function(e){
+				this.url = e.target.value;
+				this.loggers();
+			},
+			changeLevel: function(e){
+				var str = e.target.value;
+				var loggerLevel = str.split('=');
+				var logger = loggerLevel[0] || document.querySelector('#logger').value;
+				if(!logger) return;
+				this.$http({method:'GET', url:this.url+'?logger='+logger+'&level='+loggerLevel[1]});
+			},
+			loggers: function(){
+				this.$http({method:'GET', url:this.url}).then(function(response){
+					this.logs = response.data.loggers;
+				})
+			}
+		},
+		ready: function(){
+			this.loggers();
+		}
+	})
+</script>
+</html>
