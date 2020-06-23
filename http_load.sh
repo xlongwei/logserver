@@ -1,7 +1,7 @@
 hostPort=localhost:9880
-clients=1
-seconds=2
+clients=2
+seconds=3
 serviceUrl=http://$hostPort
 
-echo "$serviceUrl/log?type=list" > /tmp/urls.txt
+echo "$serviceUrl/log?type=https" > /tmp/urls.txt
 http_load -parallel $clients -seconds $seconds /tmp/urls.txt

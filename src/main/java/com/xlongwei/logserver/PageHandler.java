@@ -17,12 +17,12 @@ import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.omg.CORBA.IntHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +65,7 @@ public class PageHandler implements LightHttpHandler {
 	private String domainName = ExecUtil.firstNotBlank(System.getenv("domainName"), "xlongwei.com");
 	private String recordId = ExecUtil.firstNotBlank(System.getenv("recordId"), "4012091293697024");
 	private LinkedList<String[]> metrics = new LinkedList<>();
-	private Map<String, Tuple<IntHolder, IntHolder>> metricsMap = new HashMap<>();
+	private Map<String, Tuple<AtomicInteger, AtomicInteger>> metricsMap = new HashMap<>();
 	private ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
 	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
 	
@@ -106,12 +106,12 @@ public class PageHandler implements LightHttpHandler {
 		    	Integer value = Integer.valueOf(dot==-1 ? metric[1] : metric[1].substring(0, dot));
 		    	if(value.intValue() > 0) {
 			        String key = metric[0]+"."+metric[2];
-			        Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
+			        Tuple<AtomicInteger, AtomicInteger> tuple = metricsMap.get(key);
 			        if(tuple == null) {
-			        	metricsMap.put(key, new Tuple<>(new IntHolder(1), new IntHolder(value)));
+			        	metricsMap.put(key, new Tuple<>(new AtomicInteger(1), new AtomicInteger(value)));
 			        }else {
-			        	tuple.first.value += 1;
-			        	tuple.second.value += value;
+			        	tuple.first.incrementAndGet();
+			        	tuple.second.getAndAdd(value);
 			        }
 		    	}
 		    }catch(Exception e) {
@@ -235,8 +235,8 @@ public class PageHandler implements LightHttpHandler {
 		}else {
 			Map<String, Integer> map = new TreeMap<>();
 			for(String key : metricsMap.keySet()) {
-				Tuple<IntHolder, IntHolder> tuple = metricsMap.get(key);
-				Integer avg = tuple.second.value / tuple.first.value;
+				Tuple<AtomicInteger, AtomicInteger> tuple = metricsMap.get(key);
+				Integer avg = tuple.second.get() / tuple.first.get();
 				map.put(key, avg);
 			}
 			return mapper.writeValueAsString(map);
