@@ -55,6 +55,7 @@ import io.undertow.util.MimeMappings;
  *
  */
 public class PageHandler implements LightHttpHandler {
+	public static ScheduledThreadPoolExecutor scheduler = null;
 	private ObjectMapper mapper = Config.getInstance().getMapper();
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
 	private Logger log = LoggerFactory.getLogger(getClass());
@@ -72,21 +73,21 @@ public class PageHandler implements LightHttpHandler {
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
 		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}", accessKeyId, metricEnabled, regionId, recordId);
 		client = new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
-		ExecUtil.scheduler.scheduleWithFixedDelay(() -> {
+		PageHandler.scheduler.scheduleWithFixedDelay(() -> {
 				putCustomMetrics();
 		}, 15, 15, TimeUnit.SECONDS);
 		//每4个小时清理一下统计数据
 		Calendar calendar = Calendar.getInstance();
 		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
 		log.info("metrics map wait {} minutes to clear", minuteToWait);
-		ExecUtil.scheduler.scheduleWithFixedDelay(() -> {
+		PageHandler.scheduler.scheduleWithFixedDelay(() -> {
 				log.info("metrics map clear");
 				metricsMap.clear();
 		}, minuteToWait, range, TimeUnit.MINUTES);
 		//减少logback线程至1个，实际可能是两个
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
-		ScheduledThreadPoolExecutor scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
-		scheduler.setCorePoolSize(Math.max(1, Util.parseInteger(System.getenv("logbackThreads"))));
+		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
+		scheduler.setCorePoolSize(Math.max(2, Util.parseInteger(System.getenv("logbackThreads"))));
 	}
 
 	private void putCustomMetrics() {

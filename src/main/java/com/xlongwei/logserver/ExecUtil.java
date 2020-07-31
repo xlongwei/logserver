@@ -12,8 +12,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
@@ -38,7 +36,6 @@ public class ExecUtil {
 	public static boolean isWindows = OS.isFamilyWindows();
 	public static String logs = firstNotBlank(System.getProperty("logfile"), "logs/all.logs"), dir = new File(logs).getParent();
 	public static String cert = firstNotBlank(System.getProperty("certdir"), "/soft/cert");
-	public static ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 	private static Logger log = LoggerFactory.getLogger(ExecUtil.class);
 	
 	/** 按日期排倒序，all.logs按当天排首位 */

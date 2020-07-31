@@ -50,7 +50,7 @@ public class TailCallback implements WebSocketConnectionCallback {
 						}
 					}
     			}, 1000, true, false, 4096);
-    			ExecUtil.scheduler.submit(tailer);
+    			PageHandler.scheduler.submit(tailer);
     			log.info("tailer init and start");
 			}else {
 				log.info("tailer logs not exist: "+ExecUtil.logs);
