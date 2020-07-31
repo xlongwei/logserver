@@ -3,8 +3,6 @@ package com.xlongwei.logserver;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
@@ -30,7 +28,6 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 public class TailCallback implements WebSocketConnectionCallback {
 	private Tailer tailer = null;
 	private Logger log = LoggerFactory.getLogger(getClass());
-	private ExecutorService tailerService = Executors.newSingleThreadExecutor();
 	
 	@Override
 	public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
@@ -53,7 +50,7 @@ public class TailCallback implements WebSocketConnectionCallback {
 						}
 					}
     			}, 1000, true, false, 4096);
-    			tailerService.submit(tailer);
+    			ExecUtil.scheduler.submit(tailer);
     			log.info("tailer init and start");
 			}else {
 				log.info("tailer logs not exist: "+ExecUtil.logs);
