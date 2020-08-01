@@ -71,20 +71,20 @@ public class PageHandler implements LightHttpHandler {
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
-		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}", accessKeyId, metricEnabled, regionId, recordId);
+		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}", accessKeyId, metricEnabled, regionId, recordId);
 		client = new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
-		//减少logback线程至1个，实际可能是两个
+		//减少logback线程至2个（1个时有问题）
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
 		scheduler.setCorePoolSize(Math.max(2, Util.parseInteger(System.getenv("logbackThreads"))));
-		PageHandler.scheduler.scheduleWithFixedDelay(() -> {
+		scheduler.scheduleWithFixedDelay(() -> {
 				putCustomMetrics();
 		}, 15, 15, TimeUnit.SECONDS);
 		//每4个小时清理一下统计数据
 		Calendar calendar = Calendar.getInstance();
 		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
-		log.info("metrics map wait {} minutes to clear", minuteToWait);
-		PageHandler.scheduler.scheduleWithFixedDelay(() -> {
+		log.warn("metrics map wait {} minutes to clear", minuteToWait);
+		scheduler.scheduleWithFixedDelay(() -> {
 				log.info("metrics map clear");
 				metricsMap.clear();
 		}, minuteToWait, range, TimeUnit.MINUTES);

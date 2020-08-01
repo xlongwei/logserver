@@ -56,21 +56,11 @@
 	    </else>
     </if>    
 	
-	<logger name="com.xlongwei.logserver" level="INFO" additivity="false">
-		<appender-ref ref="STDOUT" />
-	</logger>
-	<logger name="com.networknt" level="WARN" additivity="false">
-		<appender-ref ref="STDOUT" />
-	</logger>
-	<logger name="io.undertow" level="WARN" additivity="false">
-		<appender-ref ref="STDOUT" />
-	</logger>
-	<logger name="org.xnio" level="WARN" additivity="false">
-		<appender-ref ref="STDOUT" />
-	</logger>
-	<logger name="org.jboss" level="WARN" additivity="false">
-		<appender-ref ref="STDOUT" />
-	</logger>
+	<logger name="com.xlongwei.logserver" level="WARN"/>
+	<logger name="com.networknt" level="WARN"/>
+	<logger name="io.undertow" level="WARN"/>
+	<logger name="org.xnio" level="WARN"/>
+	<logger name="org.jboss" level="WARN"/>
 
 	<root level="${logLevel}">
 		<if condition='isDefined("logfile")'>
