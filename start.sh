@@ -7,11 +7,11 @@ jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
 #JVM_OPS="-Xmx72m -Xms72m -XX:NewSize=40m -XX:MaxNewSize=40m -Xss228k"
 JVM_OPS="-Djava.compiler=none -Xmx26m -Xms26m -XX:NewSize=10m -XX:MaxNewSize=10m -Xss228k"
-#JVM_OPS="$JVM_OPS -Dlajax.token=xlongwei"
+JVM_OPS="$JVM_OPS -Dlajax.token=LAJAX"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"
-#ENV_OPS="accessKeyId=7sTaWT0zAVYmtxlq secret=`cat /etc/aliyun.secret`"
-#ENV_OPS="regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
+ENV_OPS="$ENV_OPS accessKeyId=7sTaWT0zAVYmtxlq secret=`[ -e /etc/aliyun.secret ] &&  cat /etc/aliyun.secret`"
+ENV_OPS="$ENV_OPS regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
 ENV_OPS="$ENV_OPS workerThreads=1 ioThreads=1 logbackThreads=2 enableHttps=false"
 #ENV_OPS="$ENV_OPS PATH=/usr/java/jdk1.8.0_161/bin:$PATH"
 

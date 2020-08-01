@@ -61,7 +61,7 @@ public class PageHandler implements LightHttpHandler {
 	private Logger log = LoggerFactory.getLogger(getClass());
 	private IAcsClient client = null;
 	private IClientProfile profile = null;
-	private boolean metricEnabled = false;
+	private boolean metricEnabled = false, dnsEnabled = false;
 	private String domainName = ExecUtil.firstNotBlank(System.getenv("domainName"), "xlongwei.com");
 	private String recordId = ExecUtil.firstNotBlank(System.getenv("recordId"), "4012091293697024");
 	private LinkedList<String[]> metrics = new LinkedList<>();
@@ -71,8 +71,9 @@ public class PageHandler implements LightHttpHandler {
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
-		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}", accessKeyId, metricEnabled, regionId, recordId);
-		client = new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
+		dnsEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && StringUtils.isNotBlank(regionId) && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
+		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
+		client = StringUtils.isBlank(accessKeyId) || StringUtils.isBlank(secret) || StringUtils.isBlank(regionId) ? null : new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
 		//减少logback线程至2个（1个时有问题）
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
@@ -83,7 +84,7 @@ public class PageHandler implements LightHttpHandler {
 		//每4个小时清理一下统计数据
 		Calendar calendar = Calendar.getInstance();
 		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
-		log.warn("metrics map wait {} minutes to clear", minuteToWait);
+		log.warn("metrics map wait {} minutes to clear, client={}", minuteToWait, client);
 		scheduler.scheduleWithFixedDelay(() -> {
 				log.info("metrics map clear");
 				metricsMap.clear();
@@ -314,6 +315,10 @@ public class PageHandler implements LightHttpHandler {
 	}
 	
 	private String alidns(String value) {
+		if(dnsEnabled==false) {
+			log.info("dnsEnabled={}", dnsEnabled);
+			return "false";
+		}
 		try {
 			if("true".equals(value) || value.startsWith("false")) {
 				DescribeDomainRecordsRequest request = new DescribeDomainRecordsRequest();
