@@ -74,10 +74,10 @@ public class PageHandler implements LightHttpHandler {
 		dnsEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && StringUtils.isNotBlank(regionId) && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
 		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
 		client = StringUtils.isBlank(accessKeyId) || StringUtils.isBlank(secret) || StringUtils.isBlank(regionId) ? null : new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
-		//减少logback线程至2个（1个时有问题）
+		//调整logback线程个数=3+client个数，其中3=socketAccept+tailer+scheduleWithFixedDelay
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
-		scheduler.setCorePoolSize(Math.max(2, Util.parseInteger(System.getenv("logbackThreads"))));
+		scheduler.setCorePoolSize(Math.max(4, Util.parseInteger(System.getenv("logbackThreads"))));
 		scheduler.scheduleWithFixedDelay(() -> {
 				putCustomMetrics();
 		}, 15, 15, TimeUnit.SECONDS);

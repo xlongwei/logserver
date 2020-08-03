@@ -2,7 +2,7 @@ package com.xlongwei.logserver;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
@@ -38,15 +38,18 @@ public class TailCallback implements WebSocketConnectionCallback {
     			tailer = new Tailer(logs, StandardCharsets.UTF_8, new TailerListenerAdapter() {
 					@Override
 					public void handle(String line) {
-						List<WebSocketChannel> connections = channel.getPeerConnections().stream().filter(c -> c.isOpen()).collect(Collectors.toList());
-						if(CollectionUtil.isEmpty(connections)) {
-							if(tailer != null) {
-								log.info("tailer stop and end");
-								tailer.stop();
-								tailer = null;
+						Set<WebSocketChannel> peerConnections = channel.getPeerConnections();
+						int openConnections = 0;
+						for(WebSocketChannel connection : peerConnections) {
+							if(connection.isOpen()) {
+								openConnections++;
+								WebSockets.sendText(line, connection, null);
 							}
-						}else {
-							connections.parallelStream().forEach(c -> WebSockets.sendText(line, c, null));
+						}
+						if(openConnections<=0 && tailer!=null) {
+							log.info("tailer stop and end");
+							tailer.stop();
+							tailer = null;
 						}
 					}
     			}, 1000, true, false, 4096);
