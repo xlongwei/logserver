@@ -77,7 +77,8 @@ public class PageHandler implements LightHttpHandler {
 		//调整logback线程个数=3+client个数，其中3=socketAccept+tailer+scheduleWithFixedDelay
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
-		scheduler.setCorePoolSize(Math.max(4, Util.parseInteger(System.getenv("logbackThreads"))));
+		//ScheduledThreadPoolExecutor不会按需创建新线程，logback内部的submit、execute可能为耗时任务，因此LogbackScheduler使用独立的线程池来执行耗时任务
+		scheduler.setCorePoolSize(Math.max(1, Util.parseInteger(System.getenv("logbackThreads"))));
 		scheduler.scheduleWithFixedDelay(() -> {
 				putCustomMetrics();
 		}, 15, 15, TimeUnit.SECONDS);
