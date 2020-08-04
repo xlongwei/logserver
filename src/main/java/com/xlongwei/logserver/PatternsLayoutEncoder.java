@@ -1,5 +1,7 @@
 package com.xlongwei.logserver;
 
+import java.nio.charset.Charset;
+
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -33,6 +35,13 @@ public class PatternsLayoutEncoder extends PatternLayoutEncoder {
     	}else {
     		layout = origin;
     	}
-    	return super.encode(event);
+    	String txt = layout.doLayout(event);
+    	TailCallback.notify(txt);
+    	Charset charset = getCharset();
+    	if (charset == null) {
+            return txt.getBytes();
+        } else {
+            return txt.getBytes(charset);
+        }
     }
 }

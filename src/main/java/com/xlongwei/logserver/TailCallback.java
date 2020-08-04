@@ -3,7 +3,6 @@ package com.xlongwei.logserver;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.Tailer;
@@ -11,7 +10,7 @@ import org.apache.commons.io.input.TailerListenerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.networknt.utility.CollectionUtil;
+import com.networknt.utility.StringUtils;
 
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -27,10 +26,27 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  */
 public class TailCallback implements WebSocketConnectionCallback {
 	private Tailer tailer = null;
+	private static WebSocketChannel channel;
+	private boolean userTailer = Boolean.getBoolean("userTailer");
 	private Logger log = LoggerFactory.getLogger(getClass());
+	
+	public static void notify(String txt) {
+		if(channel != null && StringUtils.isNotBlank(txt = StringUtils.trimToEmpty(txt))) {
+			Set<WebSocketChannel> peerConnections = channel.getPeerConnections();
+			for(WebSocketChannel connection : peerConnections) {
+				if(connection.isOpen()) {
+					WebSockets.sendText(txt, connection, null);
+				}
+			}
+		}
+	}
 	
 	@Override
 	public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
+		if(userTailer == false) {
+			TailCallback.channel = channel;
+			return;
+		}
 		log.info("tailer logs on connect");
 		if(tailer == null) {
 			File logs = new File(ExecUtil.logs);
@@ -67,7 +83,14 @@ public class TailCallback implements WebSocketConnectionCallback {
 			@Override
 			protected void onCloseMessage(CloseMessage cm, WebSocketChannel channel) {
 				log.info("tailer logs on disconnect");
-				if(tailer!=null && CollectionUtil.isEmpty(channel.getPeerConnections().stream().filter(c -> c.isOpen()).collect(Collectors.toList()))) {
+				Set<WebSocketChannel> peerConnections = channel.getPeerConnections();
+				int openConnections = 0;
+				for(WebSocketChannel connection : peerConnections) {
+					if(connection.isOpen()) {
+						openConnections++;
+					}
+				}
+				if(tailer!=null && openConnections<=0) {
 					tailer.stop();
 					tailer = null;
 					log.info("tailer stop and end");
