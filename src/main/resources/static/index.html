@@ -10,7 +10,7 @@ pre {
 	overflow: scroll;
 	position: absolute;
 	bottom: 1px;
-	width: 96%;
+	width: 98%;
 }
 .nav>li>a {
 	padding-left: 12px;
@@ -33,7 +33,25 @@ pre {
 			<div class="tab-content">
 				<div id="tab-tail" class="tab-pane active">
 					<div class="panel-body">
-						<pre id="tail" style="top: 50px" ondblclick="scrollLock=!scrollLock;console.log('scrollLock: '+scrollLock)"></pre>
+						<div class="row">
+							<div class="col-xs-4" style="padding:0">
+								<input class="form-control" placeholder="filter" id="filter">
+							</div>
+							<div class="col-xs-2" style="padding:0">
+							    <div class="btn-group" data-toggle="buttons">
+							        <label  class="btn btn-default" onclick="filterLog=!$('#filterLog').is(':checked');console.log('filterLog: '+filterLog)">
+							            <input type="checkbox" id="filterLog"> 过滤
+							        </label>
+							        <label class="btn btn-default" onclick="scrollLock=!$('#scrollLog').is(':checked');console.log('scrollLock: '+scrollLock)">
+							            <input type="checkbox" id="scrollLog"> 锁定
+							        </label>
+							        <label class="btn btn-default" onclick="$('#tail')[0].innerHTML='';console.log('clearLog: lines='+lines);lines=500">清空</label>
+							    </div>
+							</div>
+						</div>
+						<div class="row">
+							<pre id="tail" style="top: 99px" ondblclick="scrollLock=!scrollLock;console.log('scrollLock: '+scrollLock)"></pre>
+						</div>
 					</div>
 				</div>
 				<div id="tab-page" class="tab-pane">
@@ -58,7 +76,9 @@ pre {
 						<div class="row" style="overflow-x:auto;overflow-y:hidden">
 							<a v-for="log in logs" class="btn" style="display:inline" @click="gotoLog">{{log}}</a>
 						</div>
-						<pre style="top: 123px" id="properties"></pre>
+						<div class="row">
+							<pre style="top: 123px" id="properties"></pre>
+						</div>
 					</div>
 				</div>
 				<div id="tab-logs" class="tab-pane">
@@ -181,13 +201,19 @@ pre {
 		}
 	});
 	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
-	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, lines = 500;
+	var socket = new ReconnectingWebSocket(wsurl), scrollLock = false, filterLog = false, lines = 500, maxLines = 1000;
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail'), prefix = lines>0||scrollLock||chat.innerHTML.indexOf('\n')==-1 ? chat.innerHTML : chat.innerHTML.substr(chat.innerHTML.indexOf('\n')+1);
-		var search = $('#search').val(), hasSearch = search&&event.data.indexOf(search)>=0, text = !search ? event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : event.data.replace("<","&lt;").replace(">","&gt;").replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
-		if(!search || !scrollLock || hasSearch) chat.innerHTML = prefix + text + "\n";
-		if(scrollLock==false || hasSearch) chat.scrollTop = chat.scrollHeight;
-		if(--lines % 100 ==0) console.log('lines: '+lines);
+		var search = $('#filter').val()||$('#search').val(), hasSearch = search&&event.data.indexOf(search)>=0, text = !search ? event.data.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : event.data.replace("<","&lt;").replace(">","&gt;").replace(RegExp(search,'g'),'<code style="color:red;font-weight:bold">'+search+'</code>');
+		if(filterLog && !hasSearch) return;
+		var rows = prefix.split('\n');
+		if(scrollLock && rows.length > maxLines) {
+			rows = rows.slice(rows.length - maxLines);
+			prefix = rows.join('\n');
+		}
+		chat.innerHTML = prefix + text + "\n";
+		if(scrollLock==false) chat.scrollTop = chat.scrollHeight;
+		if(--lines % 100 ==0) console.log('lines: '+lines+", rows: "+rows.length);
 	};	
 </script>
 </html>

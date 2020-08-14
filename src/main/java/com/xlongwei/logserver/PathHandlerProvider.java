@@ -22,6 +22,7 @@ public class PathHandlerProvider implements HandlerProvider {
 	public HttpHandler getHandler() {
 		return path()
 				.addExactPath("/tail", websocket(new TailCallback()))
+				.addExactPath("/lajax", new LajaxHandler())
 				.addExactPath("/log", new PageHandler())
 				.addPrefixPath("/logs", resource(new FileResourceManager(new File(ExecUtil.dir), 1, false)))
 				.addPrefixPath("/", resource(new ClassPathResourceManager(PathHandlerProvider.class.getClassLoader(), "static")))

@@ -1,6 +1,11 @@
 
 # Singleton service factory configuration/IoC injection
 singletons:
+  - com.networknt.handler.HandlerProvider:
+    - com.xlongwei.logserver.PathHandlerProvider
+  - com.networknt.handler.MiddlewareHandler:
+#    - com.networknt.exception.ExceptionHandler
+    - com.networknt.body.BodyHandler
 # StartupHookProvider implementations, there are one to many and they are called in the same sequence defined.
 # - com.networknt.server.StartupHookProvider:
   # If you are using mask module to remove sensitive info before logging, uncomment the following line.

@@ -3,6 +3,8 @@ package com.xlongwei.logserver;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.Tailer;
@@ -27,17 +29,27 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 public class TailCallback implements WebSocketConnectionCallback {
 	private Tailer tailer = null;
 	private static WebSocketChannel channel;
-	private boolean userTailer = Boolean.getBoolean("userTailer");
+	private static boolean userTailer = Boolean.getBoolean("userTailer");
+	private static BlockingQueue<String> notifyQueue = new LinkedBlockingDeque<>();
+	private static boolean notifyQueueStarted = false;
 	private Logger log = LoggerFactory.getLogger(getClass());
 	
 	public static void notify(String txt) {
-		if(channel != null && StringUtils.isNotBlank(txt = StringUtils.trimToEmpty(txt))) {
-			Set<WebSocketChannel> peerConnections = channel.getPeerConnections();
-			for(WebSocketChannel connection : peerConnections) {
-				if(connection.isOpen()) {
-					WebSockets.sendText(txt, connection, null);
+		if(userTailer || channel==null || StringUtils.isBlank(txt = StringUtils.trimToEmpty(txt))) return;
+		notifyQueue.offer(txt);
+		if(!notifyQueueStarted) {
+			notifyQueueStarted = true;
+			PageHandler.scheduler.submit(() -> {
+				while(true) {
+					String notify = notifyQueue.take();
+					Set<WebSocketChannel> peerConnections = channel.getPeerConnections();
+					for(WebSocketChannel connection : peerConnections) {
+						if(connection.isOpen()) {
+							WebSockets.sendText(notify, connection, null);
+						}
+					}
 				}
-			}
+			});
 		}
 	}
 	

@@ -1,4 +1,5 @@
-enabled: true
+# use service.yml is jsut enough
+enabled: false
 
 handlers:
   - com.xlongwei.logserver.PathHandlerProvider@path
