@@ -34,10 +34,10 @@ pre {
 				<div id="tab-tail" class="tab-pane active">
 					<div class="panel-body">
 						<div class="row">
-							<div class="col-xs-4" style="padding:0">
+							<div class="col-md-4 col-xs-6" style="padding:0">
 								<input class="form-control" placeholder="filter" id="filter">
 							</div>
-							<div class="col-xs-2" style="padding:0">
+							<div class="col-md-2 col-xs-6" style="padding:0">
 							    <div class="btn-group" data-toggle="buttons">
 							        <label  class="btn btn-default" onclick="filterLog=!$('#filterLog').is(':checked');console.log('filterLog: '+filterLog)">
 							            <input type="checkbox" id="filterLog"> 过滤
@@ -57,10 +57,10 @@ pre {
 				<div id="tab-page" class="tab-pane">
 					<div class="panel-body">
 						<div class="row">
-							<div class="col-xs-4" style="padding:0">
+							<div class="col-md-4 col-xs-4" style="padding:0">
 								<input class="form-control" @keyup.enter="search" placeholder="search" id="search">
 							</div>
-							<div class="col-xs-2" style="padding:0">
+							<div class="col-md-2 col-xs-2" style="padding:0">
 								<select class="form-control" @change="gotoPage" style="padding:0">
 									<option v-for="page in pager.others" value="{{page[0]}}">第 {{page[0]}} 页有 {{page[1]}} 次</option>
 								</select>

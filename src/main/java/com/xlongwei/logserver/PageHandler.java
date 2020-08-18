@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -55,10 +56,10 @@ import io.undertow.util.MimeMappings;
  *
  */
 public class PageHandler implements LightHttpHandler {
-	public static ScheduledThreadPoolExecutor scheduler = null;
+	public static final ScheduledThreadPoolExecutor scheduler;
 	private ObjectMapper mapper = Config.getInstance().getMapper();
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
-	private Logger log = LoggerFactory.getLogger(getClass());
+	private static final Logger log = LoggerFactory.getLogger(PageHandler.class);
 	private IAcsClient client = null;
 	private IClientProfile profile = null;
 	private boolean metricEnabled = false, dnsEnabled = false;
@@ -68,32 +69,33 @@ public class PageHandler implements LightHttpHandler {
 	private Map<String, Tuple<AtomicInteger, AtomicInteger>> metricsMap = new HashMap<>();
 	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
 	
+	static {
+		//调整logback线程个数=3+client个数，其中3=socketAccept+tailer+scheduleWithFixedDelay
+		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
+		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
+		//ScheduledThreadPoolExecutor不会按需创建新线程，logback内部的submit、execute可能为耗时任务，因此LogbackScheduler使用独立的线程池来执行耗时任务
+		scheduler.setCorePoolSize(Math.max(1, Util.parseInteger(System.getenv("logbackThreads"))));
+	}
+	
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
 		dnsEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && StringUtils.isNotBlank(regionId) && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
 		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
 		client = StringUtils.isBlank(accessKeyId) || StringUtils.isBlank(secret) || StringUtils.isBlank(regionId) ? null : new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
-		//调整logback线程个数=3+client个数，其中3=socketAccept+tailer+scheduleWithFixedDelay
-		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
-		scheduler = (ScheduledThreadPoolExecutor)lc.getScheduledExecutorService();
-		//ScheduledThreadPoolExecutor不会按需创建新线程，logback内部的submit、execute可能为耗时任务，因此LogbackScheduler使用独立的线程池来执行耗时任务
-		scheduler.setCorePoolSize(Math.max(1, Util.parseInteger(System.getenv("logbackThreads"))));
-		scheduler.scheduleWithFixedDelay(() -> {
-				putCustomMetrics();
-		}, 15, 15, TimeUnit.SECONDS);
-		//每4个小时清理一下统计数据
+		//每15秒上报一次统计数据，每4个小时清理一下统计数据
+		scheduler.scheduleWithFixedDelay(this::putCustomMetrics, 15, 15, TimeUnit.SECONDS);
 		Calendar calendar = Calendar.getInstance();
-		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*60+calendar.get(Calendar.MINUTE), range = 4*60, minuteToWait = range - (minuteOfDay%range);
+		long minuteOfHour = TimeUnit.HOURS.toMinutes(1);
+		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*minuteOfHour+calendar.get(Calendar.MINUTE);
+		long range = 4*minuteOfHour;
+		long minuteToWait = range - (minuteOfDay%range);
 		log.warn("metrics map wait {} minutes to clear, client={}", minuteToWait, client);
-		scheduler.scheduleWithFixedDelay(() -> {
-				log.info("metrics map clear");
-				metricsMap.clear();
-		}, minuteToWait, range, TimeUnit.MINUTES);
+		scheduler.scheduleWithFixedDelay(metricsMap::clear, minuteToWait, range, TimeUnit.MINUTES);
 	}
 
 	private void putCustomMetrics() {
-		List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<PutCustomMetricRequest.MetricList>();
+		List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<>();
 		String[] metric = null;
 		String time = String.valueOf(System.currentTimeMillis());
 		while((metric=metrics.pollFirst())!=null) {
@@ -123,7 +125,7 @@ public class PageHandler implements LightHttpHandler {
 		    	//ignore
 		    }
 		}
-		if(metricListList.isEmpty() || metricEnabled==false) {
+		if(metricListList.isEmpty() || !metricEnabled) {
 			return;
 		}
 		try {
@@ -162,9 +164,9 @@ public class PageHandler implements LightHttpHandler {
 		Deque<String> loggerParams = queryParameters.get("logger");
 		List<ch.qos.logback.classic.Logger> loggers = null;
 		if(loggerParams!=null && loggerParams.size()>0) {
-			Set<String> loggerNames = loggerParams.stream().map(loggerName -> StringUtils.trimToEmpty(loggerName)).collect(Collectors.toSet());
+			Set<String> loggerNames = loggerParams.stream().map(StringUtils::trimToEmpty).collect(Collectors.toSet());
 			if(!loggerNames.isEmpty()) {
-				loggers = loggerNames.stream().map(loggerName -> (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(loggerName)).filter(logger -> logger!=null).collect(Collectors.toList());
+				loggers = loggerNames.stream().map(loggerName -> (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(loggerName)).filter(Objects::nonNull).collect(Collectors.toList());
 				if(!loggers.isEmpty()) {
 					Deque<String> levelParams = queryParameters.get("level");
 					if(levelParams!=null && levelParams.size()>0) {
@@ -239,8 +241,9 @@ public class PageHandler implements LightHttpHandler {
 			return "{\"metric\":"+metricEnabled+"}";
 		}else {
 			Map<String, Integer> map = new TreeMap<>();
-			for(String key : metricsMap.keySet()) {
-				Tuple<AtomicInteger, AtomicInteger> tuple = metricsMap.get(key);
+			for(Entry<String, Tuple<AtomicInteger, AtomicInteger>> entry : metricsMap.entrySet()) {
+				String key = entry.getKey();
+				Tuple<AtomicInteger, AtomicInteger> tuple = entry.getValue();
 				Integer avg = tuple.second.get() / tuple.first.get();
 				map.put(key, avg);
 			}
@@ -254,7 +257,7 @@ public class PageHandler implements LightHttpHandler {
 			String cmd = null, data = null;
 			switch(step) {
 			case "validateAccount":
-				if(new File(ExecUtil.cert, "account.key").exists()==false) {
+				if(!new File(ExecUtil.cert, "account.key").exists()) {
 					ExecUtil.exec(ExecUtil.cert, CommandLine.parse("openssl genrsa 4096 > account.key"));
 				}
 				cmd = "openssl rsa -in account.key -pubout";
@@ -262,7 +265,7 @@ public class PageHandler implements LightHttpHandler {
 				data = data.substring(data.indexOf('-'));
 				break;
 			case "validateCSR":
-				if(new File(ExecUtil.cert, "domain.key").exists()==false) {
+				if(!new File(ExecUtil.cert, "domain.key").exists()) {
 					ExecUtil.exec(ExecUtil.cert, CommandLine.parse("openssl genrsa 4096 > domain.key"));
 				}
 				if(StringUtils.isNotBlank(param)) {
@@ -307,7 +310,7 @@ public class PageHandler implements LightHttpHandler {
 			default:
 				break;
 			}
-			if(StringUtils.isNotBlank(data)) {
+			if(data!=null && StringUtils.isNotBlank(data)) {
 				data = data.replaceAll("\n", "\\\\n").replaceAll("\r", "\\\\r");
 				return "{\"data\":\""+data+"\"}";
 			}
@@ -327,7 +330,7 @@ public class PageHandler implements LightHttpHandler {
 		        request.setDomainName(domainName);
 		        DescribeDomainRecordsResponse response = client.getAcsResponse(request);
 		        List<Record> records = response.getDomainRecords();
-		        Optional<String> record = records.stream().filter(r -> recordId.equals(r.getRecordId())).map(r -> r.getValue()).findFirst();
+		        Optional<String> record = records.stream().filter(r -> recordId.equals(r.getRecordId())).map(Record::getValue).findFirst();
 		        return record.orElse("false");
 			}else {
 		        UpdateDomainRecordRequest request = new UpdateDomainRecordRequest();
@@ -413,8 +416,9 @@ public class PageHandler implements LightHttpHandler {
 		 * 跳转页，从1开始
 		 */
 		public void page(int page) {
-			if(notInitialized() && page>0) currentPage = page;
-			else if(page > 0 && page <= totalPages) currentPage = page;
+			if(page>0 && (notInitialized() || page<=totalPages)) {
+				currentPage = page;
+			}
 		}
 		
 		/**
@@ -487,8 +491,9 @@ public class PageHandler implements LightHttpHandler {
 		 * asc或desc
 		 */
 		public void setDirection(String direction) {
-			if("asc".equalsIgnoreCase(direction) || "desc".equalsIgnoreCase(direction)) this.direction = direction.toUpperCase();
-			else System.out.println("bad direction type: "+direction);
+			if("asc".equalsIgnoreCase(direction) || "desc".equalsIgnoreCase(direction)) {
+				this.direction = direction.toUpperCase();
+			}
 		}
 
 		public String getProperties() {

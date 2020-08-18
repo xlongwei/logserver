@@ -32,12 +32,12 @@ public class TailCallback implements WebSocketConnectionCallback {
 	private static boolean userTailer = Boolean.getBoolean("userTailer");
 	private static BlockingQueue<String> notifyQueue = new LinkedBlockingDeque<>();
 	private static boolean notifyQueueStarted = false;
-	private Logger log = LoggerFactory.getLogger(getClass());
+	private static final Logger log = LoggerFactory.getLogger(TailCallback.class);
 	
 	public static void notify(String txt) {
 		if(userTailer || channel==null || StringUtils.isBlank(txt = StringUtils.trimToEmpty(txt))) return;
-		notifyQueue.offer(txt);
-		if(!notifyQueueStarted) {
+		boolean offer = notifyQueue.offer(txt);
+		if(offer && !notifyQueueStarted) {
 			notifyQueueStarted = true;
 			PageHandler.scheduler.submit(() -> {
 				while(true) {
@@ -55,7 +55,7 @@ public class TailCallback implements WebSocketConnectionCallback {
 	
 	@Override
 	public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
-		if(userTailer == false) {
+		if(!userTailer) {
 			TailCallback.channel = channel;
 			return;
 		}
@@ -84,7 +84,7 @@ public class TailCallback implements WebSocketConnectionCallback {
     			PageHandler.scheduler.submit(tailer);
     			log.info("tailer init and start");
 			}else {
-				log.info("tailer logs not exist: "+ExecUtil.logs);
+				log.info("tailer logs not exist: {}", ExecUtil.logs);
 			}
 		}
 		if(tailer != null) {

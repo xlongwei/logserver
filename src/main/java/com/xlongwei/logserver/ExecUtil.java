@@ -2,7 +2,6 @@ package com.xlongwei.logserver;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.LineNumberReader;
 import java.text.SimpleDateFormat;
@@ -33,18 +32,18 @@ import com.networknt.utility.Util;
  *
  */
 public class ExecUtil {
-	public static boolean isWindows = OS.isFamilyWindows();
-	public static String logs = firstNotBlank(System.getProperty("logfile"), "logs/all.logs"), dir = new File(logs).getParent();
-	public static String cert = firstNotBlank(System.getProperty("certdir"), "/soft/cert");
-	private static Logger log = LoggerFactory.getLogger(ExecUtil.class);
+	public static final boolean isWindows = OS.isFamilyWindows();
+	public static final String logs = firstNotBlank(System.getProperty("logfile"), "logs/all.logs");
+	public static final String dir = new File(logs).getParent();
+	public static final String cert = firstNotBlank(System.getProperty("certdir"), "/soft/cert");
+	private static final Logger log = LoggerFactory.getLogger(ExecUtil.class);
+	private static final ThreadLocal<SimpleDateFormat> df = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
 	
 	/** 按日期排倒序，all.logs按当天排首位 */
-	public static Comparator<String> logsComparator = new Comparator<String>() {
-		@Override
-		public int compare(String o1, String o2) {
+	public static final Comparator<String> logsComparator = (o1, o2) -> {
 			String s1 = o1.substring(o1.lastIndexOf('.')+1);
 			String s2 = o2.substring(o2.lastIndexOf('.')+1);
-			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+			SimpleDateFormat df = ExecUtil.df.get();
 			try {
 				Date d1 = StringUtils.isBlank(s1)||s1.indexOf('-')==-1 ? null : df.parse(s1);
 				Date d2 = StringUtils.isBlank(s2)||s2.indexOf('-')==-1 ? null : df.parse(s2);
@@ -52,7 +51,6 @@ public class ExecUtil {
 			}catch(Exception e) {
 				return 0;
 			}
-		}
 	};
 	
 	/** 搜索dir目录下的日志文件，列出包含search文本的文件名 */
@@ -77,27 +75,20 @@ public class ExecUtil {
 			String find = exec(dir, command);
 			String[] lines = find.split("[\r\n]+");
 			for(String line : lines) {
-				if(StringUtils.isBlank(line)) {
-					continue;
-				}else if(isWindows) {
-					int e = line.indexOf(':'), s = e==-1 ? -1 : line.lastIndexOf(' ', e);
-					if(s == -1) {
-						continue;
-					}else if(Integer.parseInt(line.substring(e+1).trim()) > 0) {
-						files.add(line.substring(s, e).trim().toLowerCase());
+				if(StringUtils.isNotBlank(line)) {
+					if(isWindows) {
+						int e = line.indexOf(':'), s = e==-1 ? -1 : line.lastIndexOf(' ', e);
+						if(s!=-1 && Integer.parseInt(line.substring(e+1).trim()) > 0) {
+							files.add(line.substring(s, e).trim().toLowerCase());
+						}
+					}else {
+						files.add(FilenameUtils.getName(line));
 					}
-				}else {
-					files.add(FilenameUtils.getName(line));
 				}
 			}
 		}else {
 			File dir = new File(ExecUtil.dir);
-			File[] logs = dir.listFiles(new FileFilter() {
-				@Override
-				public boolean accept(File pathname) {
-					return pathname.getName().endsWith(".gz") == false;
-				}
-			});
+			File[] logs = dir.listFiles(pathname -> !pathname.getName().endsWith(".gz"));
 			for(File file : logs) {
 				files.add(file.getName());
 			}

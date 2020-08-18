@@ -23,8 +23,9 @@ public class LajaxHandler implements LightHttpHandler {
 	public static final HttpString ACCESS_CONTROL_ALLOW_ORIGIN = new HttpString("Access-Control-Allow-Origin");
 	public static final HttpString ACCESS_CONTROL_ALLOW_METHODS = new HttpString("Access-Control-Allow-Methods");
 	public static final HttpString ACCESS_CONTROL_ALLOW_HEADERS = new HttpString("Access-Control-Allow-Headers");
-	private static Logger log = LoggerFactory.getLogger("lajax");
-	private static String token = System.getProperty("lajax.token");
+	private static final Logger log = LoggerFactory.getLogger("lajax");
+	private static final String token = System.getProperty("lajax.token");
+	private static final String LAJAX_LOG_FORMAT = "lajax {} {} {}: {}, url={}, agent={}";
 	
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -46,20 +47,24 @@ public class LajaxHandler implements LightHttpHandler {
 			try {
 				((List)body).forEach(item -> {
 					Map map = (Map)item;
-					String level = (String)(map).get("level");
+					String level = ((String)(map).get("level")).toUpperCase();
 					List list = (List)map.get("messages");
-					String reqId = list.get(0).toString(), message = list.get(1).toString();
+					String reqId = list.get(0).toString();
+					String message = list.get(1).toString();
 					reqId = reqId.substring(1, reqId.length()-1);
+					Object time = map.get("time");
+					Object url = map.get("url");
+					Object agent = map.get("agent");
 					if("info".equals(level)) {
-						log.info("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
+						log.info(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
 					}else if("warn".equals(level)) {
-						log.warn("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
+						log.warn(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
 					}else {
-						log.error("lajax {} {} {}: {}, url={}, agent={}", map.get("time"), level.toUpperCase(), reqId, message, map.get("url"), map.get("agent"));
+						log.error(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
 					}
 				});
 			}catch(Exception e) {
-				log.debug("lajax fail={}, body={}", e.getMessage(), body);
+				log.debug("lajax fail={}, msg={}, body={}", e.getClass().getSimpleName(), e.getMessage(), body);
 			}
 		}
 		exchange.setStatusCode(HttpURLConnection.HTTP_OK);

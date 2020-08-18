@@ -46,31 +46,18 @@ public class ExecutorServiceUtil {
         }
     };
     
-    public static LogbackScheduler scheduler = null;
+    public static final LogbackScheduler scheduler = new LogbackScheduler(1, THREAD_FACTORY);
 
-    static public ScheduledExecutorService newScheduledExecutorService() {
-        return scheduler();
-    }
-
-	static public LogbackScheduler scheduler() {
-		if(scheduler != null) {
-        	return scheduler;
-        }
-        synchronized (ExecutorServiceUtil.class) {
-			if(scheduler == null) {
-				scheduler = new LogbackScheduler(1, THREAD_FACTORY);
-			}
-		}
+    public static ScheduledExecutorService newScheduledExecutorService() {
         return scheduler;
-	}
-
+    }
 
     /**
      * Creates an executor service suitable for use by logback components.
      * @return executor service
      */
-    static public ExecutorService newExecutorService() {
-        return scheduler().getExecutorService();
+    public static ExecutorService newExecutorService() {
+        return scheduler.getExecutorService();
     }
 
     /**
@@ -78,7 +65,7 @@ public class ExecutorServiceUtil {
      * <p>
      * @param executorService the executor service to shut down
      */
-    static public void shutdown(ExecutorService executorService) {
+    public static void shutdown(ExecutorService executorService) {
         executorService.shutdownNow();
     }
 

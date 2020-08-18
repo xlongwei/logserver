@@ -14,13 +14,14 @@ import org.slf4j.LoggerFactory;
 
 public class FileBeat {
 	private static Logger log = LoggerFactory.getLogger("filebeat");
-	private static ExecutorService es = Executors.newCachedThreadPool();
-	private static SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
 	public static void main(String[] args) {
 		String filebeat = System.getProperty("filebeat");
-		log.info("filebeat {} INFO files: {}", df.format(new Date()), filebeat);
+		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		String now = df.format(new Date());
+		log.info("filebeat {} INFO files: {}", now, filebeat);
 		if(filebeat!=null && filebeat.length()>0) {
+			ExecutorService es = Executors.newCachedThreadPool();
 			for(String filepath : filebeat.split("[,;]")) {
 				File file = new File(filepath);
 				Tailer tailer = new Tailer(file, StandardCharsets.UTF_8, new TailerListenerAdapter() {
