@@ -29,6 +29,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 public class TailCallback implements WebSocketConnectionCallback {
 	private Tailer tailer = null;
 	private static WebSocketChannel channel;
+	private static File logs = new File(ExecUtil.logs);
 	private static boolean userTailer = Boolean.getBoolean("userTailer");
 	private static BlockingQueue<String> notifyQueue = new LinkedBlockingDeque<>();
 	private static boolean notifyQueueStarted = false;
@@ -55,13 +56,16 @@ public class TailCallback implements WebSocketConnectionCallback {
 	
 	@Override
 	public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
+		if(logs.exists()) {
+			String tail = ExecUtil.tail(FilenameUtils.getName(ExecUtil.logs), 100);
+			WebSockets.sendText(tail, channel, null);
+		}
 		if(!userTailer) {
 			TailCallback.channel = channel;
 			return;
 		}
 		log.info("tailer logs on connect");
 		if(tailer == null) {
-			File logs = new File(ExecUtil.logs);
 			if(logs.exists()) {
     			tailer = new Tailer(logs, StandardCharsets.UTF_8, new TailerListenerAdapter() {
 					@Override
@@ -86,10 +90,6 @@ public class TailCallback implements WebSocketConnectionCallback {
 			}else {
 				log.info("tailer logs not exist: {}", ExecUtil.logs);
 			}
-		}
-		if(tailer != null) {
-			String tail = ExecUtil.tail(FilenameUtils.getName(ExecUtil.logs), 100);
-			WebSockets.sendText(tail, channel, null);
 		}
 		channel.getReceiveSetter().set(new AbstractReceiveListener() {
 			@Override

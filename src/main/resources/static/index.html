@@ -144,7 +144,7 @@ pre {
 				else if(num>this.pager.totalPages) num = this.pager.totalPages;
 				console.log(this.log+" => page: "+num);
 				this.pager.currentPage = num;
-				this.$http({method:'GET', url:'/log?type=page&log='+this.log
+				this.$http({method:'POST', url:'/log?type=page&log='+this.log
 						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
 						+"&pageSize="+this.pager.pageSize
 						+"&currentPage="+num
@@ -155,7 +155,7 @@ pre {
 						this.pager.totalPages = response.data.totalPages;
 						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
-						if(this.pager.others.length > 0) {
+						if(this.pager.others.length > 0 && this.pager.others[0] > 1) {
 							this.page(this.pager.others[0][0]);
 						}
 					}else{
@@ -164,7 +164,7 @@ pre {
 							this.pager.totalPages = response.data.totalPages;
 						}
 					}
-					$('#properties').html(!this.searchStr ? response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;").replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>'));
+					$('#properties').html(!response.data.properties ? '' : !this.searchStr ? response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;") : response.data.properties.replace(RegExp("<",'g'),"&lt;").replace(RegExp(">",'g'),"&gt;").replace(RegExp(this.searchStr,'g'),'<code style="color:red;font-weight:bold">'+this.searchStr+'</code>'));
 					//输出调试信息
 					var a=JSON.parse(JSON.stringify(this.pager));
 					delete a.properties;
@@ -177,7 +177,7 @@ pre {
 				this.doSearch();
 			},
 			doSearch: function(){
-				this.$http({method:'GET', url:'/log?type=list&search='+this.searchStr}).then(function(response){
+				this.$http({method:'POST', url:'/log?type=list&search='+this.searchStr}).then(function(response){
 					this.logs = response.data;
 					if(this.logs.length > 0) {
 						this.log =this.logs[0];

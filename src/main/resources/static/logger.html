@@ -66,13 +66,13 @@
 				this.$http({method:'GET', url:this.url+'?logger='+logger+'&level='+loggerLevel[1]});
 			},
 			loggers: function(){
-				this.$http({method:'GET', url:this.url}).then(function(response){
+				this.$http({method:'POST', url:this.url}).then(function(response){
 					this.logs = response.data.loggers;
 				})
 			}
 		},
 		ready: function(){
-			this.loggers();
+			setTimeout(this.loggers, 1000);
 		}
 	})
 </script>
