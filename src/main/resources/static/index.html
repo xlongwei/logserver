@@ -71,6 +71,7 @@ pre {
 						    	<input style="width:30px" @keyup.enter="gotoPage" placeholder="{{pager.totalPages}}" v-model="pager.currentPage" value="{{pager.currentPage}}"/>
 								<a class="btn" style="padding-left:1px;padding-right:1px" @click="next">下页</a>
 								<a class="btn" style="padding-left:1px;padding-right:1px" @click="last">尾页</a>
+								<a class="btn" style="padding-left:1px;padding-right:1px" @click="search">Q</a>
 							</div>
 						</div>
 						<div class="row" style="overflow-x:auto;overflow-y:hidden">
@@ -172,7 +173,7 @@ pre {
 				})
 			},
 			search: function(e){
-				var str = e.target.value;
+				var str = $('#search').val();
 				this.searchStr = !str ? '' : str;
 				this.doSearch();
 			},
