@@ -24,7 +24,7 @@ public class LajaxHandler implements LightHttpHandler {
 	public static final HttpString ACCESS_CONTROL_ALLOW_METHODS = new HttpString("Access-Control-Allow-Methods");
 	public static final HttpString ACCESS_CONTROL_ALLOW_HEADERS = new HttpString("Access-Control-Allow-Headers");
 	private static final Logger log = LoggerFactory.getLogger("lajax");
-	private static final String token = System.getProperty("lajax.token");
+	public static final String token = System.getProperty("lajax.token");
 	private static final String LAJAX_LOG_FORMAT = "lajax {} {} {}: {}, url={}, agent={}";
 	
 	@Override

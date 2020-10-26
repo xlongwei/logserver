@@ -151,6 +151,8 @@ public class PageHandler implements LightHttpHandler {
 			response = metric(exchange);
 		}else if("https".equals(type)) {
 			response = https(exchange);
+		}else if("alidns".equals(type)){
+			response = alidns(exchange);
 		}else {
 			response = logger(exchange);
 		}
@@ -313,6 +315,37 @@ public class PageHandler implements LightHttpHandler {
 			if(data!=null && StringUtils.isNotBlank(data)) {
 				data = data.replaceAll("\n", "\\\\n").replaceAll("\r", "\\\\r");
 				return "{\"data\":\""+data+"\"}";
+			}
+		}
+		return null;
+	}
+	
+	private String alidns(HttpServerExchange exchange) {
+		String recordId = getParam(exchange, "recordId"), ip = getParam(exchange, "ip");
+		if(StringUtils.isNotBlank(recordId) && StringUtils.isBlank(LajaxHandler.token) || LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
+			try {
+				DescribeDomainRecordsRequest query = new DescribeDomainRecordsRequest();
+				query.setRegionId(profile.getRegionId());
+				query.setDomainName(domainName);
+				DescribeDomainRecordsResponse response = client.getAcsResponse(query);
+				List<Record> records = response.getDomainRecords();
+				Record record = records.stream().filter(r -> recordId.equals(r.getRecordId())).findFirst().orElse(null);
+				String value = record==null ? "false" : record.getValue();
+				if(record!=null && StringUtils.isNotBlank(ip) && !ip.equals(value)) {
+			        UpdateDomainRecordRequest update = new UpdateDomainRecordRequest();
+			        update.setRegionId(profile.getRegionId());
+			        update.setRecordId(recordId);
+			        update.setRR(record.getRR());
+			        update.setType(record.getType());
+			        update.setValue(ip);
+			        client.getAcsResponse(update);
+			        return value + " => "+ip;
+				}else {
+					return value;
+				}
+			}catch(Exception e) {
+				log.info("alidns fail: {}", e.getMessage());
+				return "false: " + e.getMessage();
 			}
 		}
 		return null;
