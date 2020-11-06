@@ -160,10 +160,10 @@ public class ExecUtil {
 					log.warn(e.getMessage());
 				}
 			}else {
-				CommandLine command = CommandLine.parse("grep -n "+search+" "+logs);
+				CommandLine command = CommandLine.parse("grep -no "+search+" "+logs);
 				String line = exec(dir, command); //分隔行：\\r?\\n|\\r，忽略空行：[\r?\n|\r]+，Java8：\\R
 				for(String row : line.split("\\R")) {
-					if(StringUtils.isBlank(row)) continue;
+					if(StringUtils.isBlank(row) || row.indexOf(':')==-1) continue;
 					int n = Util.parseInteger(row.substring(0, row.indexOf(':')));
 					if(n>0) lines.add(n);
 				}
