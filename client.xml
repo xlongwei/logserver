@@ -14,7 +14,7 @@
 		<key>logserver</key>
 		<pubsub>true</pubsub>
 		<pushpop>true</pushpop>
-		<rangeSize>10240</rangeSize>
+		<queueSize>10240</queueSize>
 		<host>localhost</host>
 		<port>6379</port>
 	</appender>

@@ -18,6 +18,7 @@
 5. -Djava.compiler=none，禁用JIT可节约内存，默认启用JIT可提高性能
 6. 定时压缩日志（logserver不再搜索），56 23 * * * sh /soft/shells/[tgz_logs.sh](https://gitee.com/xlongwei/logserver/blob/master/aliyun/tgz_logs.sh) >> /var/log/mycron_clears.log，
 7. filebeat模式：vi start.sh，打开filebeat注释，用于跟踪多个日志文件，并发送日志内容到logserver
+8. 可选redis媒介：打开-Dredis注释，支持pubsub发布订阅和pushpop消息队列，日志发送方参考client.xml的REDIS配置，并且需要复制RedisAppender类到正确的包下面
 
 #### 前端日志
 
