@@ -10,6 +10,18 @@
 		<appender-ref ref="SOCKET" />
 		<IncludeCallerData>true</IncludeCallerData>
 	</appender>
+	<appender name="REDIS" class="ch.qos.logback.classic.redis.RedisAppender">
+		<key>logserver</key>
+		<pubsub>true</pubsub>
+		<pushpop>true</pushpop>
+		<rangeSize>10240</rangeSize>
+		<host>localhost</host>
+		<port>6379</port>
+	</appender>
+	<appender name="ASYNC_REDIS" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="REDIS" />
+		<IncludeCallerData>true</IncludeCallerData>
+	</appender>
     <root level="DEBUG">
     	<appender-ref ref="ASYNC_SOCKET"/>
     </root>

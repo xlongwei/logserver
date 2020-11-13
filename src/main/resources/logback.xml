@@ -53,6 +53,18 @@
 			<receiver class="ch.qos.logback.classic.net.server.ServerSocketReceiver">
 				<port>${logPort}</port>
 			</receiver>
+			<if condition='isDefined("redis")'>
+				<then>
+					<receiver class="ch.qos.logback.classic.redis.RedisReceiver">
+						<key>${redis.key:-logserver}</key>
+						<pubsub>${redis.pubsub:-true}</pubsub>
+						<pushpop>${redis.pushpop:-false}</pushpop>
+						<queueSize>${redis.queueSize:-10240}</queueSize>
+						<host>${redis.host:-localhost}</host>
+						<port>${redis.port:-6379}</port>
+					</receiver>
+				</then>
+			</if>
 	    </else>
     </if>    
 	

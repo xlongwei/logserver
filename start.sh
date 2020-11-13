@@ -7,6 +7,7 @@ jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
 #JVM_OPS="-Xmx72m -Xms72m -XX:NewSize=40m -XX:MaxNewSize=40m -Xss228k"
 JVM_OPS="-Djava.compiler=none -Xmx26m -Xms26m -XX:NewSize=10m -XX:MaxNewSize=10m -Xss228k"
+#JVM_OPS="-Dredis -Dredis.host=localhost -Dredis.port=6379 -Dredis.pubsub=false -Dredis.pushpop=true"
 JVM_OPS="$JVM_OPS -Dlajax.token=LAJAX"
 JVM_OPS="$JVM_OPS -DcontextName=logserver"
 JVM_OPS="$JVM_OPS -DlogLength=2048"

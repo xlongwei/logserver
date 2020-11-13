@@ -49,7 +49,7 @@ public class SocketClient2 {
             if (s.equals("q")) {
                 break;
             } else {
-                logger.info(s);
+                logger.warn(s);
             }
         }
     }
