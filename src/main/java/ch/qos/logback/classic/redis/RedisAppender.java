@@ -57,18 +57,18 @@ public class RedisAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
 	}
 	
 	private void returnBrokenResource() {
-		if(returnBrokenResource==null) {
-			try {
-				returnBrokenResource = JedisPool.class.getDeclaredMethod("returnBrokenResource", Jedis.class);
-				returnBrokenResource.setAccessible(true);
-			}catch(Exception e) {
-				System.err.println("fail to get method returnBrokenResource: "+e.getMessage());
-			}
-		}
+//		if(returnBrokenResource==null) {
+//			try {
+//				returnBrokenResource = JedisPool.class.getDeclaredMethod("returnBrokenResource", Jedis.class);
+//				returnBrokenResource.setAccessible(true);
+//			}catch(Exception e) {
+//				System.err.println("fail to get method returnBrokenResource: "+e.getMessage());
+//			}
+//		}
 		try {
 			//针对jedis不同版本，可以直接调用close或returnBrokenResource方法，则注释掉反射代码即可
-			returnBrokenResource.invoke(pool, client);
-//			client.close();
+//			returnBrokenResource.invoke(pool, client);
+			client.close();
 //			pool.returnBrokenResource(client);
 		}catch(Exception e) {
 			System.err.println("fail to returnBrokenResource: "+e.getMessage());
