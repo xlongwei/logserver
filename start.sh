@@ -5,12 +5,10 @@ daemon=true
 logfile=/var/log/logserver/all.logs
 jarfile=target/logserver.jar
 [ ! -e "$jarfile" ] && jarfile=logserver.jar
-#JVM_OPS="-Xmx72m -Xms72m -XX:NewSize=40m -XX:MaxNewSize=40m -Xss228k"
-JVM_OPS="-Djava.compiler=none -Xmx26m -Xms26m -XX:NewSize=10m -XX:MaxNewSize=10m -Xss228k"
-#JVM_OPS="-Dredis -Dredis.host=localhost -Dredis.port=6379 -Dredis.pubsub=true -Dredis.pushpop=true -Dredis.queueSize=10240"
-JVM_OPS="$JVM_OPS -Dlajax.token=xlongwei"
-JVM_OPS="$JVM_OPS -DcontextName=logserver"
-JVM_OPS="$JVM_OPS -DlogLength=2048"
+Survivor=1 Old=16 NewSize=$[Survivor*10] Xmx=$[NewSize+Old] #NewSize=Survivor*(1+1+8) Xmx=NewSize+Old
+JVM_OPS="-Xmx${Xmx}m -Xms${Xmx}m -XX:NewSize=${NewSize}m -XX:MaxNewSize=${NewSize}m -XX:SurvivorRatio=8 -Xss228k"
+#JVM_OPS="$JVM_OPS -Dredis -Dredis.host=localhost -Dredis.port=6379 -Dredis.pubsub=true -Dredis.pushpop=true -Dredis.queueSize=10240"
+JVM_OPS="$JVM_OPS -Djava.compiler=none -Dlajax.token=xlongwei -DcontextName=logserver -DlogLength=2048"
 ENV_OPS="$ENV_OPS accessKeyId=7sTaWT0zAVYmtxlq secret=`[ -e /etc/aliyun.secret ] &&  cat /etc/aliyun.secret`"
 ENV_OPS="$ENV_OPS regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
 ENV_OPS="$ENV_OPS workerThreads=1 ioThreads=1 enableHttps=false"
