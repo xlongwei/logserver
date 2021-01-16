@@ -26,7 +26,7 @@ pre {
 				<li class="active"><a data-toggle="tab" href="#tab-tail" @dblclick="open('/tail.html')" title="实时跟踪最新日志，使用WebSocket技术">tail</a></li>
 				<li class=""><a data-toggle="tab" href="#tab-page" @dblclick="open('/page.html')" title="分页查看最近日志，支持搜索">page</a></li>
 				<li class=""><a data-toggle="tab" href="#tab-logs" @dblclick="open('/log.html')" title="下载最近日志文件">logs</a></li>
-				<li class=""><a href="/files" @dblclick="open('/files')" target="_blank" title="nginx浏览">files</a></li>
+				<li class="" v-if="files"><a href="/files" @dblclick="open('/files')" target="_blank" title="nginx浏览">files</a></li>
 				<li class=""><a href="/https.html" @dblclick="open('/https.html')" target="_blank" title="https证书">https</a></li>
 				<li class=""><a href="/logger.html" @dblclick="open('/logger.html')" target="_blank" title="logger管理">logger</a></li>
 			</ul>
@@ -109,6 +109,7 @@ pre {
 			logs: ['all.logs','all.logs.2019-10-09'], //日志文件列表，查询接口log?type=list&search=
 			log: 'all.logs',  //当前浏览日志文件
 			searchStr: '',  //搜索字符串
+			files: false,
 			pager: {  //分页查询日志，查询接口log?type=page&log=&currentPage=，totalRows缓存总函数，search搜索出现页码
 				totalRows: 0,
 				pageSize: 1000,  //默认每页1000行日志
@@ -198,6 +199,9 @@ pre {
 			}
 		},
 		ready: function(){
+			this.$http({method:'POST', url:'/log?type=props&key=files'}).then(function(response){
+				this.files = response.data.files && response.data.files=='true';
+			})
 			this.doSearch();
 		}
 	});

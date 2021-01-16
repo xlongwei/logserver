@@ -67,7 +67,7 @@ public class ExecUtil {
 			}else {
 				//find ! -name *.gz -exec grep -li '${search}' {} \;  find . -type f -exec zgrep -li '${search}' {} \;
 				//1，命令行的分号需要转义\;或引号';'而CommandLine不需要；2，为提高效率可以自定义查找最近几天内的日志，这里查找未gz压缩的日志（通过gz规则控制数量）
-				command = CommandLine.parse("find ! -name *.gz -exec grep -li ''${search}'' {} ;"); //find . -type f -exec zgrep -li ''${search}'' {} ;
+				command = CommandLine.parse("find ! -name *.gz -type f -exec grep -li ''${search}'' {} ;"); //find . -type f -exec zgrep -li ''${search}'' {} ;
 			}
 			Map<String, Object> substitutionMap = new HashMap<>(4);
 			substitutionMap.put("search", search);

@@ -49,8 +49,7 @@
 		data: {
 			logs: [{"logger":"ROOT","level":"DEBUG"}],
 			url: '/log',
-			urls: [{"appName":"logserver","url":"https://log.xlongwei.com/log"},{"appName":"light4j","url":"https://api.xlongwei.com/demo/log"},{"appName":"cms","url":"https://cms.xlongwei.com/demo/log.json"},{"appName":"apidoc","url":"https://api.xlongwei.com/apidoc/demo/log.htm"},{"appName":"bpmdemo","url":"https://bpm.xlongwei.com/demo/demo/log"}],
-			//urls: [{"appName":"logserver","url":"http://localhost:9880/log"},{"appName":"light4j","url":"http://localhost:8080/demo/log"},{"appName":"cms","url":"http://localhost:8081/demo/log.json"},{"appName":"apidoc","url":"http://localhost:8081/apidoc/demo/log.htm"},{"appName":"bpmdemo","url":"http://localhost:8080/demo/demo/log"}],
+			urls: [],
 			levels: ['', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'TRACE', 'ALL', 'OFF']
 		},
 		methods: {
@@ -65,6 +64,36 @@
 				if(!logger) return;
 				this.$http({method:'GET', url:this.url+'?logger='+logger+'&level='+loggerLevel[1]});
 			},
+			logger: function(){
+				this.$http({method:'POST', url:'/log?type=props&key=logger'}).then(function(response){
+					let logger = response.data.logger //-Dlogger=logserver@/log,cms@https://cms.xlongwei.com/demo/log.json
+					if(logger && logger.length > 0){
+						let split = logger.split(',')
+						for(let i in split){
+							let nameUrl = split[i]
+							if(nameUrl && nameUrl.indexOf('@') > 0){
+								let pair = nameUrl.split('@')
+								this.urls.push({"appName":pair[0],"url":pair[1]})
+							}
+						}
+					}
+					if(this.urls.length > 0){
+						//
+					}else if(location.hostname.endsWith('xlongwei.com')){
+						this.urls.push({"appName":"logserver","url":"https://log.xlongwei.com/log"});
+						this.urls.push({"appName":"apidoc","url":"https://api.xlongwei.com/apidoc/demo/log.htm"});
+						this.urls.push({"appName":"bpmdemo","url":"https://bpm.xlongwei.com/demo/demo/log"});
+						this.urls.push({"appName":"cms","url":"https://cms.xlongwei.com/demo/log.json"});
+						this.urls.push({"appName":"light4j","url":"https://api.xlongwei.com/demo/log"});
+					}else{
+						this.urls.push({"appName":"logserver","url":"/log"});
+						this.urls.push({"appName":"apidoc","url":"http://localhost:8081/apidoc/demo/log.htm"});
+						this.urls.push({"appName":"bpmdemo","url":"http://localhost:8080/demo/demo/log"});
+						this.urls.push({"appName":"cms","url":"http://localhost:8081/demo/log.json"});
+						this.urls.push({"appName":"light4j","url":"http://localhost:8080/demo/log"});
+					}
+				})
+			},
 			loggers: function(){
 				this.$http({method:'POST', url:this.url}).then(function(response){
 					this.logs = response.data.loggers;
@@ -72,6 +101,7 @@
 			}
 		},
 		ready: function(){
+			this.logger();
 			setTimeout(this.loggers, 1000);
 		}
 	})
