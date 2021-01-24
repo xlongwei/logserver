@@ -772,7 +772,7 @@ scp intermediate.pem root@foo.com:/etc/ssl/certs/intermediate.pem
     </div>
     <!-- error happens with latest index.js, so we use older one instead. -->
     <!-- <script src="https://gethttpsforfree.com/js/index.js"></script> -->
-    <script src="/js/index.js"></script>
+    <script src="js/index.js"></script>
     <script type="text/javascript">
     function ajaxHttps(step, target, source, style){
     	event.preventDefault();
@@ -780,7 +780,7 @@ scp intermediate.pem root@foo.com:/etc/ssl/certs/intermediate.pem
     		return;
     	}
     	var ajaxHttps_xhr = new XMLHttpRequest();
-    	ajaxHttps_xhr.open("GET", "/log?type=https&step="+step+"&param="+encodeURIComponent(!source || !document.getElementById(source).value ? "" : document.getElementById(source).value));
+    	ajaxHttps_xhr.open("GET", "log?type=https&step="+step+"&param="+encodeURIComponent(!source || !document.getElementById(source).value ? "" : document.getElementById(source).value));
     	ajaxHttps_xhr.onload = function(){
 			if(ajaxHttps_xhr.responseText){
 				document.getElementById(target).value = JSON.parse(ajaxHttps_xhr.responseText).data;
@@ -795,7 +795,7 @@ scp intermediate.pem root@foo.com:/etc/ssl/certs/intermediate.pem
     		return;
     	}
     	var ajaxHttps_xhr = new XMLHttpRequest();
-    	ajaxHttps_xhr.open("GET", "/log?type=https&step="+step+"&param="+encodeURIComponent(!source || !parentNode.querySelector(source).value ? "" : parentNode.querySelector(source).value));
+    	ajaxHttps_xhr.open("GET", "log?type=https&step="+step+"&param="+encodeURIComponent(!source || !parentNode.querySelector(source).value ? "" : parentNode.querySelector(source).value));
     	ajaxHttps_xhr.onload = function(){
 			if(ajaxHttps_xhr.responseText){
 				parentNode.querySelector(target).value = JSON.parse(ajaxHttps_xhr.responseText).data;

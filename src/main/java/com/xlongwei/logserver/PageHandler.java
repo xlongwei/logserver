@@ -154,7 +154,7 @@ public class PageHandler implements LightHttpHandler {
 		}else if("alidns".equals(type)){
 			response = alidns(exchange);
 		}else if("props".equals(type)){
-			String key = getParam(exchange, "key"), value = System.getProperty(key);
+			String key = getParam(exchange, "key"), value = StringUtils.isBlank(key)||!"files,logger".contains(key) ? "" : System.getProperty(key);
 			response = "{\"" + key + "\":\"" + value + "\"}";
 		}else {
 			response = logger(exchange);

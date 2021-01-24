@@ -27,7 +27,7 @@
 				this.doSearch(str);
 			},
 			doSearch: function(search){
-				this.$http({method:'GET', url:'/log?type=list&search='+search}).then(function(response){
+				this.$http({method:'GET', url:'log?type=list&search='+search}).then(function(response){
 					this.logs = response.data;
 				})
 			}

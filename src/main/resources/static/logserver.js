@@ -66,7 +66,7 @@ Lajax.prototype._send = function(){
     }
 }
 var logger = new Lajax({
-	url:'/lajax',//日志服务器的 URL
+	url:'lajax',//日志服务器的 URL
 	autoLogError:false,//是否自动记录未捕获错误true
 	autoLogRejection:false,//是否自动记录Promise错误true
 	autoLogAjax:false,//是否自动记录 ajax 请求true

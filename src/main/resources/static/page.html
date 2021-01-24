@@ -77,7 +77,7 @@
 				//if(this.pager.totalRows>0 && num==this.pager.currentPage && num!=this.pager.totalPages) return;
 				console.log(this.log+" => page: "+num);
 				this.pager.currentPage = num;
-				this.$http({method:'POST', url:'/log?type=page&log='+this.log
+				this.$http({method:'POST', url:'log?type=page&log='+this.log
 						+"&totalRows="+(this.pager.totalRows>0?this.pager.totalRows:'')
 						+"&pageSize="+this.pager.pageSize
 						+"&currentPage="+num
@@ -111,7 +111,7 @@
 				this.doSearch();
 			},
 			doSearch: function(){
-				this.$http({method:'POST', url:'/log?type=list&search='+this.searchStr}).then(function(response){
+				this.$http({method:'POST', url:'log?type=list&search='+this.searchStr}).then(function(response){
 					this.logs = response.data;
 					if(this.logs.length > 0) {
 						this.log =this.logs[0];

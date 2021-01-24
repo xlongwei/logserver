@@ -5,7 +5,7 @@
 <title>tail log</title>
 <script src="https://cdn.bootcss.com/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
 <script>
-	var wsurl = (location.protocol.toString().startsWith("https") ? "wss://" : "ws://") + location.host + "/tail";
+	var wsurl = (location.href.replace('tail.html','')+"tail").replace('http','ws');
 	var socket = new ReconnectingWebSocket(wsurl);
 	socket.onmessage = function(event) {
 		var chat = document.getElementById('tail');

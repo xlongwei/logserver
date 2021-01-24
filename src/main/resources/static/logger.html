@@ -48,7 +48,7 @@
 		el : '.container-fluid',
 		data: {
 			logs: [{"logger":"ROOT","level":"DEBUG"}],
-			url: '/log',
+			url: 'log',
 			urls: [],
 			levels: ['', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'TRACE', 'ALL', 'OFF']
 		},
@@ -65,7 +65,7 @@
 				this.$http({method:'GET', url:this.url+'?logger='+logger+'&level='+loggerLevel[1]});
 			},
 			logger: function(){
-				this.$http({method:'POST', url:'/log?type=props&key=logger'}).then(function(response){
+				this.$http({method:'POST', url:'log?type=props&key=logger'}).then(function(response){
 					let logger = response.data.logger //-Dlogger=logserver@/log,cms@https://cms.xlongwei.com/demo/log.json
 					if(logger && logger.length > 0){
 						let split = logger.split(',')
