@@ -1,6 +1,8 @@
 files=10
 days=7
 
+#crontab -e
+#56 23 * * * sh /soft/shells/tgz_logs.sh >> /var/log/mycron_clears.log
 log_dirs=(
 /var/log/logserver
 )
