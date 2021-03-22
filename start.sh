@@ -24,17 +24,17 @@ usage(){
     echo "  stop        stop logserver"
     echo "  restart     stop && start"
     echo "  clean       clean target"
-    echo "  jar       build $jarfile"
+    echo "  jar         build $jarfile"
     echo "  jars        copy dependencies to target"
     echo "  package     build logser.jar and copy dependencies to target"
     echo "  rebuild     stop && build && start"
     echo "  refresh     stop && clean && build && jars && start"
-    echo "  deploy      package all to one-fat logserver.jar"
-    echo "  redeploy    package all to one-fat logserver.jar and restart"
+    echo "  deploy      package all to one-fat $jarfile"
+    echo "  redeploy    package all to one-fat $jarfile and restart"
 }
 
 status(){
-    PIDS=`ps -ef | grep java | grep "logserver.jar" |awk '{print $2}'`
+    PIDS=`ps -ef | grep java | grep "$jarfile" |awk '{print $2}'`
 
 	if [ -z "$PIDS" ]; then
 	    echo "logserver is not running!"
@@ -46,7 +46,7 @@ status(){
 }
 
 stop(){
-    PIDS=`ps -ef | grep java | grep "logserver.jar" |awk '{print $2}'`
+    PIDS=`ps -ef | grep java | grep "$jarfile" |awk '{print $2}'`
 
 	if [ -z "$PIDS" ]; then
 	    echo "logserver is not running!"
@@ -54,7 +54,7 @@ stop(){
 		echo -e "Stopping logserver ..."
 		for PID in $PIDS ; do
 			echo -e "kill $PID"
-		    kill $PID > /dev/null 2>&1
+		    kill -9 $PID > /dev/null 2>&1
 		done
 	fi
 }
