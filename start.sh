@@ -54,8 +54,32 @@ stop(){
 		echo -e "Stopping logserver ..."
 		for PID in $PIDS ; do
 			echo -e "kill $PID"
-		    kill -9 $PID > /dev/null 2>&1
+		    kill $PID > /dev/null 2>&1
 		done
+	fi
+}
+
+wait(){
+	PIDS=`ps -ef | grep java | grep "$jarfile" |awk '{print $2}'`
+
+	if [ ! -z "$PIDS" ]; then
+		COUNT=0 WAIT=9
+		while [ $COUNT -lt $WAIT ]; do
+			echo -e ".\c"
+			sleep 1
+			PIDS=`ps -ef | grep java | grep "$jarfile" |awk '{print $2}'`
+			if [ -z "$PIDS" ]; then
+				break
+			fi
+			let COUNT=COUNT+1
+		done
+		PIDS=`ps -ef | grep java | grep "$jarfile" |awk '{print $2}'`
+		if [ ! -z "$PIDS" ]; then
+			for PID in $PIDS ; do
+				echo -e "kill -9 $PID"
+				kill -9 $PID > /dev/null 2>&1
+			done
+		fi
 	fi
 }
 
@@ -100,7 +124,7 @@ else
 	status) status ;;
 	start) start ;;
 	stop) stop ;;
-	restart) stop && start ;;
+	restart) stop && wait && start ;;
 	clean) clean ;;
 	jar) jar ;;
 	jars) dependency ;;
