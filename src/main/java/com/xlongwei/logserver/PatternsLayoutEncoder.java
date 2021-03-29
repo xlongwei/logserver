@@ -41,6 +41,7 @@ public class PatternsLayoutEncoder extends PatternLayoutEncoderBase<ILoggingEven
     		layout = origin;
     	}
     	String txt = layout.doLayout(event);
+    	txt = MaskUtil.mask(txt);
     	TailCallback.notify(txt);
     	Charset charset = getCharset();
     	if (charset == null) {

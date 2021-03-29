@@ -19,6 +19,7 @@
 6. 定时压缩日志（logserver不再搜索），56 23 * * * sh /soft/shells/[tgz_logs.sh](https://gitee.com/xlongwei/logserver/blob/master/aliyun/tgz_logs.sh) >> /var/log/mycron_clears.log，
 7. filebeat模式：vi start.sh，打开filebeat注释，用于跟踪多个日志文件，并发送日志内容到logserver，也支持redis媒介
 8. 可选redis媒介：打开-Dredis注释，支持pubsub发布订阅和pushpop消息队列，日志发送方参考[logback.xml](https://gitee.com/xlongwei/light4j/blob/master/src/main/resources/logback.xml)，并且需要复制[RedisAppender](https://gitee.com/xlongwei/light4j/blob/master/src/main/java/ch/qos/logback/classic/redis/RedisAppender.java)类到正确的包下面
+9. -Dfiles=false关闭files页签，-Dlogger=logserver@log配置logger页签，-Dmask=password(3,8)配置日志脱敏（password之后的第3至8个字符加星*）
 
 #### 前端日志
 
