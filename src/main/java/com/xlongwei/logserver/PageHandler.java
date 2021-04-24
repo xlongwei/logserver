@@ -328,7 +328,7 @@ public class PageHandler implements LightHttpHandler {
 		if(StringUtils.isNotBlank(recordId) && StringUtils.isBlank(LajaxHandler.token) || LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
 			try {
 				DescribeDomainRecordsRequest query = new DescribeDomainRecordsRequest();
-				query.setRegionId(profile.getRegionId());
+				query.setSysRegionId(profile.getRegionId());
 				query.setDomainName(domainName);
 				DescribeDomainRecordsResponse response = client.getAcsResponse(query);
 				List<Record> records = response.getDomainRecords();
@@ -336,7 +336,7 @@ public class PageHandler implements LightHttpHandler {
 				String value = record==null ? "false" : record.getValue();
 				if(record!=null && StringUtils.isNotBlank(ip) && !ip.equals(value)) {
 			        UpdateDomainRecordRequest update = new UpdateDomainRecordRequest();
-			        update.setRegionId(profile.getRegionId());
+			        update.setSysRegionId(profile.getRegionId());
 			        update.setRecordId(recordId);
 			        update.setRR(record.getRR());
 			        update.setType(record.getType());
@@ -362,7 +362,7 @@ public class PageHandler implements LightHttpHandler {
 		try {
 			if("true".equals(value) || value.startsWith("false")) {
 				DescribeDomainRecordsRequest request = new DescribeDomainRecordsRequest();
-		        request.setRegionId(profile.getRegionId());
+		        request.setSysRegionId(profile.getRegionId());
 		        request.setDomainName(domainName);
 		        DescribeDomainRecordsResponse response = client.getAcsResponse(request);
 		        List<Record> records = response.getDomainRecords();
@@ -370,7 +370,7 @@ public class PageHandler implements LightHttpHandler {
 		        return record.orElse("false");
 			}else {
 		        UpdateDomainRecordRequest request = new UpdateDomainRecordRequest();
-		        request.setRegionId(profile.getRegionId());
+		        request.setSysRegionId(profile.getRegionId());
 		        request.setRecordId(recordId);
 		        request.setRR("_acme-challenge");
 		        request.setType("TXT");
