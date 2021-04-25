@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,7 +15,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +39,7 @@ import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.utility.StringUtils;
@@ -153,8 +155,10 @@ public class PageHandler implements LightHttpHandler {
 			response = https(exchange);
 		}else if("alidns".equals(type)){
 			response = alidns(exchange);
+		}else if("regist".equals(type)){
+			response = regist(exchange);
 		}else if("props".equals(type)){
-			String key = getParam(exchange, "key"), value = StringUtils.isBlank(key)||!"files,logger".contains(key) ? "" : System.getProperty(key);
+			String key = getParam(exchange, "key"), value = StringUtils.isBlank(key)||!"files,logger,lajax.token".contains(key) ? "" : System.getProperty(key);
 			response = "{\"" + key + "\":\"" + value + "\"}";
 		}else {
 			response = logger(exchange);
@@ -165,28 +169,22 @@ public class PageHandler implements LightHttpHandler {
 	}
 
 	private String logger(HttpServerExchange exchange) throws JsonProcessingException {
-		Map<String, Deque<String>> queryParameters = exchange.getQueryParameters();
-		Deque<String> loggerParams = queryParameters.get("logger");
+		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
+		String loggerName = getParam(exchange, "logger");
 		List<ch.qos.logback.classic.Logger> loggers = null;
-		if(loggerParams!=null && loggerParams.size()>0) {
-			Set<String> loggerNames = loggerParams.stream().map(StringUtils::trimToEmpty).collect(Collectors.toSet());
-			if(!loggerNames.isEmpty()) {
-				loggers = loggerNames.stream().map(loggerName -> (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(loggerName)).filter(Objects::nonNull).collect(Collectors.toList());
-				if(!loggers.isEmpty()) {
-					Deque<String> levelParams = queryParameters.get("level");
-					if(levelParams!=null && levelParams.size()>0) {
-						String levelName = levelParams.getFirst();
-						Level level = Level.toLevel(levelName, null);
-						loggers.forEach(logger -> {
-							log.info("change logger:{} level from:{} to:{}", logger.getName(), logger.getLevel(), level);
-							logger.setLevel(level);
-						});
-					}
+		if(StringUtils.isNotBlank(loggerName)) {
+			ch.qos.logback.classic.Logger logger = lc.getLogger(loggerName);
+			if(logger != null) {
+				loggers = Arrays.asList(logger);
+				String levelName = getParam(exchange, "level");
+				if(StringUtils.isNotBlank(levelName)) {
+					Level level = Level.toLevel(levelName, null);
+					log.warn("change logger:{} level from:{} to:{}", logger.getName(), logger.getLevel(), level);
+					logger.setLevel(level);
 				}
 			}
 		}
 		if(loggers == null) {
-			LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 			loggers = lc.getLoggerList();
 		}
 		log.info("check logger level, loggers:{}", loggers.size());
@@ -347,11 +345,36 @@ public class PageHandler implements LightHttpHandler {
 					return value;
 				}
 			}catch(Exception e) {
-				log.info("alidns fail: {}", e.getMessage());
+				log.warn("alidns fail: {}", e.getMessage());
 				return "false: " + e.getMessage();
 			}
 		}
 		return null;
+	}
+	
+	@SuppressWarnings("rawtypes")
+	private String regist(HttpServerExchange exchange) throws JsonProcessingException {
+		String name = getParam(exchange, "name");
+		boolean regist = false;
+		if(StringUtils.isNotBlank(name)) {
+			Map body = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
+			String token = Objects.toString(body.get("token"), null), url = Objects.toString(body.get("url"), null);
+			if(StringUtils.isNotBlank(url) && (StringUtils.isBlank(LajaxHandler.token) || LajaxHandler.token.equals(token))) {
+				String logger = System.getProperty("logger");
+				String pair = name+"@"+url;
+				if(StringUtils.isNotBlank(logger)) {
+					if(!logger.contains(pair)) {
+						logger += "," + pair;
+					}
+				}else {
+					logger = pair;
+				}
+				System.setProperty("logger", logger);
+				regist = true;
+			}
+			log.warn("{}={} regist={}", name, url, regist);
+		}
+		return mapper.writeValueAsString(Collections.singletonMap("regist", regist));
 	}
 	
 	private String alidns(String value) {

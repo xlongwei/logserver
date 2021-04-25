@@ -21,6 +21,26 @@
 8. 可选redis媒介：打开-Dredis注释，支持pubsub发布订阅和pushpop消息队列，日志发送方参考[logback.xml](https://gitee.com/xlongwei/light4j/blob/master/src/main/resources/logback.xml)，并且需要复制[RedisAppender](https://gitee.com/xlongwei/light4j/blob/master/src/main/java/ch/qos/logback/classic/redis/RedisAppender.java)类到正确的包下面
 9. -Dfiles=false关闭files页签，-Dlogger=logserver@log配置logger页签，-Dmask=password(3,8)配置日志脱敏（password之后的第3至8个字符加星*）
 
+#### [logserver-spring-boot-starter](https://gitee.com/xlongwei/logserver-spring-boot-starter)
+```xml
+<dependency>
+    <groupId>com.xlongwei.logserver</groupId>
+    <artifactId>logserver-spring-boot-starter</artifactId>
+    <version>0.0.2</version>
+</dependency>
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+logserver:
+  remoteHost: 192.168.1.99 #指定logserver
+management: #需要依赖spring-boot-starter-actuator
+  endpoints:
+    web:
+      exposure:
+        include: logserver #开启LogserverEndpoint，让logserver变更日志级别
+```
+
 #### 前端日志
 
 1. [lajax](https://github.com/eshengsky/lajax)：var logger = new Lajax(url); logger.info(arg1,...args);
