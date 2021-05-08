@@ -89,7 +89,7 @@
 	    </else>
     </if>    
 	
-	<logger name="com.xlongwei.logserver" level="WARN"/>
+	<logger name="com.xlongwei" level="INFO"/>
 	<logger name="com.networknt" level="WARN"/>
 	<logger name="io.undertow" level="WARN"/>
 	<logger name="org.xnio" level="WARN"/>
