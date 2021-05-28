@@ -1,5 +1,7 @@
 .classpath
+.history
 .project
 .settings
+.vscode
 target
 logs

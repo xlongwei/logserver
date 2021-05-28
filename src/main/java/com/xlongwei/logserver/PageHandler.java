@@ -21,12 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
 import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsRequest;
@@ -45,6 +39,18 @@ import com.networknt.handler.LightHttpHandler;
 import com.networknt.utility.StringUtils;
 import com.networknt.utility.Tuple;
 import com.networknt.utility.Util;
+
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -67,6 +73,7 @@ public class PageHandler implements LightHttpHandler {
 	private boolean metricEnabled = false, dnsEnabled = false;
 	private String domainName = ExecUtil.firstNotBlank(System.getenv("domainName"), "xlongwei.com");
 	private String recordId = ExecUtil.firstNotBlank(System.getenv("recordId"), "4012091293697024");
+	private String lightSearch = System.getProperty("light-search", "http://localhost:9200");
 	private LinkedList<String[]> metrics = new LinkedList<>();
 	private Map<String, Tuple<AtomicInteger, AtomicInteger>> metricsMap = new HashMap<>();
 	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
@@ -226,12 +233,41 @@ public class PageHandler implements LightHttpHandler {
 		pager.setProperties(page);
 		//搜索search所在页码列表
 		if(StringUtils.isNotBlank(search)) {
-			List<Integer> lines = ExecUtil.lines(logs, search);
+			List<Integer> lines = lines(logs, search);
 			List<Integer[]> pages = ExecUtil.pages(lines, pager.getPageSize());
 			pager.setOthers(pages);
 		}
 		log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
 		return mapper.writeValueAsString(pager);
+	}
+
+	@SuppressWarnings({ "rawtypes" })
+	private List<Integer> lines(String logs, String search) {
+		if (Boolean.getBoolean("useSearch")) {
+			try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+				HttpPost post = new HttpPost(
+						lightSearch + "/service/logserver/lines?logs=" + logs + "&search=" + Util.urlEncode(search));
+				CloseableHttpResponse execute = client.execute(post);
+				if (execute.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+					// {lines:[1,2,3]}
+					String string = EntityUtils.toString(execute.getEntity(), StandardCharsets.UTF_8);
+					Map map = mapper.readValue(string, Map.class);
+					Object object = map.get("lines");
+					if (object != null && object instanceof List) {
+						List<Integer> lines = new LinkedList<>();
+						List list = (List) object;
+						for (Object item : list) {
+							lines.add(Integer.parseInt(item.toString()));
+						}
+						return lines;
+					}
+				}
+			} catch (Exception e) {
+			}
+			return Collections.emptyList();
+		} else {
+			return ExecUtil.lines(logs, search);
+		}
 	}
 
 	private String metric(HttpServerExchange exchange) throws JsonProcessingException {
