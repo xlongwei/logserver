@@ -233,8 +233,7 @@ public class PageHandler implements LightHttpHandler {
 		pager.setProperties(page);
 		//搜索search所在页码列表
 		if(StringUtils.isNotBlank(search)) {
-			List<Integer> lines = lines(logs, search);
-			List<Integer[]> pages = ExecUtil.pages(lines, pager.getPageSize());
+			List<Integer[]> pages = pages(logs, search, pager.getPageSize());
 			pager.setOthers(pages);
 		}
 		log.info("page logs page: {}, {}", logs, pager.getCurrentPage());
@@ -242,31 +241,33 @@ public class PageHandler implements LightHttpHandler {
 	}
 
 	@SuppressWarnings({ "rawtypes" })
-	private List<Integer> lines(String logs, String search) {
+	private List<Integer[]> pages(String logs, String search, int pageSize) {
 		if (Boolean.getBoolean("useSearch")) {
 			try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
 				HttpPost post = new HttpPost(
-						lightSearch + "/service/logserver/lines?logs=" + logs + "&search=" + Util.urlEncode(search));
+						lightSearch + "/service/logserver/pages?logs=" + logs + "&search=" + Util.urlEncode(search)
+								+ "&pageSize=" + pageSize);
 				CloseableHttpResponse execute = client.execute(post);
 				if (execute.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-					// {lines:[1,2,3]}
 					String string = EntityUtils.toString(execute.getEntity(), StandardCharsets.UTF_8);
 					Map map = mapper.readValue(string, Map.class);
-					Object object = map.get("lines");
+					Object object = map.get("pages");
 					if (object != null && object instanceof List) {
-						List<Integer> lines = new LinkedList<>();
+						List<Integer[]> pages = new LinkedList<>();
 						List list = (List) object;
 						for (Object item : list) {
-							lines.add(Integer.parseInt(item.toString()));
+							List arr = (List) item;
+							pages.add(new Integer[] { (Integer) arr.get(0), (Integer) arr.get(1) });
 						}
-						return lines;
+						return pages;
 					}
 				}
 			} catch (Exception e) {
 			}
 			return Collections.emptyList();
 		} else {
-			return ExecUtil.lines(logs, search);
+			List<Integer> lines = ExecUtil.lines(logs, search);
+			return ExecUtil.pages(lines, pageSize);
 		}
 	}
 
