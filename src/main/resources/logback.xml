@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration scan="false" scanPeriod="60 seconds" debug="false">
     <contextName>${contextName:-logserver}</contextName>
-    <property name="logLevel" value="${logLevel:-DEBUG}"/>
+    <property name="logLevel" value="${logLevel:-WARN}"/>
     <property name="logPort" value="${logPort:-6000}"/>
     <property name="logPattern" value="%cn %d{HH:mm:ss.SSS} %-5level [%thread] %logger{0}:%L %.-${logLength:-2048}msg%n"/>
     
@@ -89,7 +89,7 @@
 	    </else>
     </if>    
 	
-	<logger name="com.xlongwei" level="INFO"/>
+	<logger name="com.xlongwei" level="WARN"/>
 	<logger name="com.networknt" level="WARN"/>
 	<logger name="io.undertow" level="WARN"/>
 	<logger name="org.xnio" level="WARN"/>

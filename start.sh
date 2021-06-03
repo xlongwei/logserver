@@ -13,7 +13,7 @@ JVM_OPS="$JVM_OPS -Djava.compiler=none -Dlajax.token=xlongwei -DcontextName=$app
 ENV_OPS="$ENV_OPS accessKeyId=`[ -e /etc/aliyun.accessKeyId ] &&  cat /etc/aliyun.accessKeyId` secret=`[ -e /etc/aliyun.secret ] &&  cat /etc/aliyun.secret`"
 ENV_OPS="$ENV_OPS regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
 JVM_OPS="$JVM_OPS -Dfiles=false -Dlogger=logserver@log -Dmask=password(3,8)"
-#JVM_OPS="$JVM_OPS -Dfiles=true -Dlogger=logserver@https://log.xlongwei.com/log,apidoc@https://api.xlongwei.com/apidoc/demo/log.htm,bpmdemo@https://bpm.xlongwei.com/demo/demo/log,cms@https://cms.xlongwei.com/demo/log.json,light4j@https://api.xlongwei.com/demo/log,search@https://log.xlongwei.com/service/logserver/log"
+#JVM_OPS="$JVM_OPS -Dfiles=true -Dlogger=logserver@log,apidoc@https://api.xlongwei.com/apidoc/demo/log.htm,bpmdemo@https://bpm.xlongwei.com/demo/demo/log,cms@https://cms.xlongwei.com/demo/log.json,light4j@https://api.xlongwei.com/demo/log,search@https://log.xlongwei.com/service/logserver/log"
 #JVM_OPS="$JVM_OPS -Dlogger=logserver@log,apidoc@http://localhost:8081/apidoc/demo/log.htm,bpmdemo@http://localhost:8080/demo/demo/log,cms@http://localhost:8081/demo/log.json,light4j@http://localhost:8080/demo/log,search@http://localhost:9200/service/logserver/log"
 #JVM_OPS="$JVM_OPS -Dlight-search=http://backup:9200 -DuseIndexer=true -DuseSearch=true"
 #JVM_OPS="$JVM_OPS -Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n"
