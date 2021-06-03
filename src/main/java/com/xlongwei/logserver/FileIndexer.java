@@ -17,7 +17,9 @@ import com.networknt.utility.Tuple;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -30,6 +32,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
     private static boolean logfile = System.getProperty("logfile") != null;
     private static boolean useIndexer = Boolean.getBoolean("useIndexer");
     private static File logs = new File(ExecUtil.logs);
+    private static CloseableHttpClient client = HttpClientBuilder.create().build();
     Tailer tailer = null;
 
     @Override
@@ -48,6 +51,15 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             log.info("tailer stop");
             tailer.stop();
         }
+        try {
+            FileIndexer.client.close();
+            log.info("client close");
+        } catch (Exception e) {
+        }
+    }
+
+    public static CloseableHttpResponse execute(HttpUriRequest request) throws Exception {
+        return client.execute(request);
     }
 
     static class IndexerListener extends TailerListenerAdapter {
@@ -82,7 +94,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         }
 
         private void open() {
-            try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+            try {
                 HttpPost post = new HttpPost(lightSearch + "/service/index/open?name=logserver");
                 // logserver=day:string,number:int,line:text
                 List<Map<String, String>> fields = new LinkedList<>();
@@ -110,7 +122,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             if (this.docs == null || this.docs.isEmpty()) {
                 return;
             }
-            try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+            try {
                 HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
                 List<Map<String, String>> docs = new LinkedList<>();
                 final String day = LocalDate.now().toString();
@@ -134,7 +146,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             if (list.size() > 1) {
                 String last = list.get(list.size() - 1);
                 String day = last.substring(last.lastIndexOf(".") + 1);
-                try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+                try {
                     // 删除day以前的日志索引
                     HttpPost post = new HttpPost(lightSearch + "/service/logserver/delete?day=" + day);
                     client.execute(post);

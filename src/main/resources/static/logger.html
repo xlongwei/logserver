@@ -50,7 +50,6 @@
 			logs: [{"logger":"ROOT","level":"DEBUG"}],
 			url: 'log',
 			urls: [],
-			token: '',
 			levels: ['', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'TRACE', 'ALL', 'OFF']
 		},
 		methods: {
@@ -63,7 +62,10 @@
 				var loggerLevel = str.split('=');
 				var logger = loggerLevel[0] || document.querySelector('#logger').value;
 				if(!logger) return;
-				this.$http({method:'POST', url:this.url+'?logger='+logger+'&level='+loggerLevel[1], data: {'token': this.token}});
+				var token = prompt('请输入密码：');
+				this.$http({method:'POST', url:'log?type=loggers', params: {'url':this.url,'logger':logger,'level':loggerLevel[1],'token': token}}).then(function (response) {
+					this.loggers();
+				});
 			},
 			logger: function(){
 				this.$http({method:'POST', url:'log?type=props&key=logger'}).then(function(response){
@@ -79,27 +81,14 @@
 						}
 					}
 					if(this.urls.length > 0){
-						//lajax.token
-						this.$http({method:'POST', url:'log?type=props&key=lajax.token'}).then(function(response){
-							this.token=response.data['lajax.token'] || 'xlongwei';
-						})
-					}else if(location.hostname.endsWith('xlongwei.com')){
-						this.urls.push({"appName":"logserver","url":"https://log.xlongwei.com/log"});
-						this.urls.push({"appName":"apidoc","url":"https://api.xlongwei.com/apidoc/demo/log.htm"});
-						this.urls.push({"appName":"bpmdemo","url":"https://bpm.xlongwei.com/demo/demo/log"});
-						this.urls.push({"appName":"cms","url":"https://cms.xlongwei.com/demo/log.json"});
-						this.urls.push({"appName":"light4j","url":"https://api.xlongwei.com/demo/log"});
+						this.url = this.urls[0].url;
 					}else{
 						this.urls.push({"appName":"logserver","url":"/log"});
-						this.urls.push({"appName":"apidoc","url":"http://localhost:8081/apidoc/demo/log.htm"});
-						this.urls.push({"appName":"bpmdemo","url":"http://localhost:8080/demo/demo/log"});
-						this.urls.push({"appName":"cms","url":"http://localhost:8081/demo/log.json"});
-						this.urls.push({"appName":"light4j","url":"http://localhost:8080/demo/log"});
 					}
 				})
 			},
 			loggers: function(){
-				this.$http({method:'POST', url:this.url, data: {'token': this.token}}).then(function(response){
+				this.$http({method:'POST', url:'log?type=loggers', params:{url:this.url}}).then(function(response){
 					this.logs = response.data.loggers;
 				})
 			}

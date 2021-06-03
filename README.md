@@ -27,14 +27,20 @@
 <dependency>
     <groupId>com.xlongwei.logserver</groupId>
     <artifactId>logserver-spring-boot-starter</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.3</version>
 </dependency>
 <dependency>
 	<groupId>org.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
+
+-Dlogserver.token=xlongwei
+-Dlogserver.remoteHost=192.168.1.99
+-Dmanagement.endpoints.web.exposure.include=logserver
+
 logserver:
   remoteHost: 192.168.1.99 #指定logserver
+  token: xlongwei #安全校验，需要与logserver的lajax.token一致
 management: #需要依赖spring-boot-starter-actuator
   endpoints:
     web:

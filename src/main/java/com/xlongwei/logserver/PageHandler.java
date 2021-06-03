@@ -46,6 +46,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
@@ -165,8 +166,11 @@ public class PageHandler implements LightHttpHandler {
 		}else if("regist".equals(type)){
 			response = regist(exchange);
 		}else if("props".equals(type)){
-			String key = getParam(exchange, "key"), value = StringUtils.isBlank(key)||!"files,logger,lajax.token".contains(key) ? "" : System.getProperty(key);
+			String key = getParam(exchange, "key"),
+					value = StringUtils.isBlank(key) || !"files,logger".contains(key) ? "" : System.getProperty(key);
 			response = "{\"" + key + "\":\"" + value + "\"}";
+		}else if("loggers".equals(type)){
+			response = loggers(exchange);
 		}else {
 			response = logger(exchange);
 		}
@@ -175,7 +179,24 @@ public class PageHandler implements LightHttpHandler {
 		exchange.getResponseSender().send(StringUtils.trimToEmpty(response));
 	}
 
-	private String logger(HttpServerExchange exchange) throws JsonProcessingException {
+	private String loggers(HttpServerExchange exchange) throws Exception {
+		String url = getParam(exchange, "url");
+		if(StringUtils.isNotBlank(url)&&url.startsWith("http")){
+			HttpPost post = new HttpPost(url);
+			post.addHeader("Content-Type", "application/json");
+			Map<String, Object> body = new HashMap<>();
+			body.put("logger", getParam(exchange, "logger"));
+			body.put("level", getParam(exchange, "level"));
+			body.put("token", getParam(exchange, "token"));
+			post.setEntity(new StringEntity(Config.getInstance().getMapper().writeValueAsString(body), StandardCharsets.UTF_8));
+			CloseableHttpResponse response = FileIndexer.execute(post);
+			return EntityUtils.toString(response.getEntity());
+		}else{
+			return logger(exchange);
+		}
+	}
+
+	private String logger(HttpServerExchange exchange) throws Exception {
 		LoggerContext lc = (LoggerContext)LoggerFactory.getILoggerFactory();
 		String loggerName = getParam(exchange, "logger");
 		List<ch.qos.logback.classic.Logger> loggers = null;
@@ -184,7 +205,8 @@ public class PageHandler implements LightHttpHandler {
 			if(logger != null) {
 				loggers = Arrays.asList(logger);
 				String levelName = getParam(exchange, "level");
-				if(StringUtils.isNotBlank(levelName)) {
+				if (StringUtils.isNotBlank(levelName) && (StringUtils.isBlank(LajaxHandler.token)
+						|| LajaxHandler.token.equals(getParam(exchange, "token")))) {
 					Level level = Level.toLevel(levelName, null);
 					log.warn("change logger:{} level from:{} to:{}", logger.getName(), logger.getLevel(), level);
 					logger.setLevel(level);
@@ -360,7 +382,8 @@ public class PageHandler implements LightHttpHandler {
 	
 	private String alidns(HttpServerExchange exchange) {
 		String recordId = getParam(exchange, "recordId"), ip = getParam(exchange, "ip");
-		if(StringUtils.isNotBlank(recordId) && StringUtils.isBlank(LajaxHandler.token) || LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
+		if (StringUtils.isNotBlank(recordId) && (StringUtils.isBlank(LajaxHandler.token)
+				|| LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token")))) {
 			try {
 				DescribeDomainRecordsRequest query = new DescribeDomainRecordsRequest();
 				query.setSysRegionId(profile.getRegionId());
