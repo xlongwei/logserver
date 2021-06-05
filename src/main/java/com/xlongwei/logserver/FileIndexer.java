@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.networknt.config.Config;
 import com.networknt.server.ShutdownHookProvider;
@@ -81,7 +82,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             log.info("number={}", number);
             // number += 3;// 有3行索引不到
             PageHandler.scheduler.submit(this::open);
-            PageHandler.scheduler.submit(this::docs);
+            PageHandler.scheduler.scheduleWithFixedDelay(this::docs, 10, 10, TimeUnit.SECONDS);
         }
 
         @Override
@@ -114,37 +115,33 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         }
 
         private void docs() {
-            while(true){
-                if(!lines.isEmpty()) {
-                    final String day = LocalDate.now().toString();
-                    try {
-                        HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
-                        List<Map<String, String>> docs = new LinkedList<>();
-                        Tuple<Integer, String> pair = lines.poll();
-                        while(pair != null){
-                            Map<String, String> doc = new HashMap<>();
-                            doc.put("day", day);
-                            doc.put("number", pair.first.toString());
-                            doc.put("line", pair.second);
-                            docs.add(doc);
-                            if(docs.size() >= 100) {
-                                break;
-                            }else{
-                                pair = lines.poll();
-                            }
-                        }
-                        Object body = Collections.singletonMap("add", docs);
-                        String string = Config.getInstance().getMapper().writeValueAsString(body);
-                        post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
-                        client.execute(post);
-                    } catch (Exception e) {
+            if(lines.isEmpty()) {
+                return;
+            }
+            final String day = LocalDate.now().toString();
+            try {
+                HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
+                List<Map<String, String>> docs = new LinkedList<>();
+                Tuple<Integer, String> pair = lines.poll();
+                while(pair != null){
+                    Map<String, String> doc = new HashMap<>();
+                    doc.put("day", day);
+                    doc.put("number", pair.first.toString());
+                    doc.put("line", pair.second);
+                    docs.add(doc);
+                    if(docs.size() >= 100) {
+                        log.info("lines remaining={}", lines.size());
+                        break;
+                    }else{
+                        pair = lines.poll();
                     }
                 }
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    break;
-                }
+                log.info("docs={}", docs.size());
+                Object body = Collections.singletonMap("add", docs);
+                String string = Config.getInstance().getMapper().writeValueAsString(body);
+                post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
+                client.execute(post);
+            } catch (Exception e) {
             }
         }
 
