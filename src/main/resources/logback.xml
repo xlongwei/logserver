@@ -99,8 +99,10 @@
 		<if condition='isDefined("logfile")'>
 		    <then>
 				<appender-ref ref="ASYNC_FILE" />
-		    </then>		
+		    </then>
+			<else>
+				<appender-ref ref="STDOUT" />
+			</else>
 		</if>
-		<appender-ref ref="STDOUT" />
 	</root>
 </configuration>
