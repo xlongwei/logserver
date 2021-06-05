@@ -91,7 +91,7 @@ public class PageHandler implements LightHttpHandler {
 		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
 		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
 		dnsEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && StringUtils.isNotBlank(regionId) && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
-		log.warn("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
+		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
 		client = StringUtils.isBlank(accessKeyId) || StringUtils.isBlank(secret) || StringUtils.isBlank(regionId) ? null : new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
 		//每15秒上报一次统计数据，每4个小时清理一下统计数据
 		scheduler.scheduleWithFixedDelay(this::putCustomMetrics, 15, 15, TimeUnit.SECONDS);
@@ -100,7 +100,7 @@ public class PageHandler implements LightHttpHandler {
 		long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*minuteOfHour+calendar.get(Calendar.MINUTE);
 		long range = 4*minuteOfHour;
 		long minuteToWait = range - (minuteOfDay%range);
-		log.warn("metrics map wait {} minutes to clear, client={}", minuteToWait, client);
+		log.info("metrics map wait {} minutes to clear, client={}", minuteToWait, client);
 		scheduler.scheduleWithFixedDelay(metricsMap::clear, minuteToWait, range, TimeUnit.MINUTES);
 	}
 
@@ -189,7 +189,7 @@ public class PageHandler implements LightHttpHandler {
 			body.put("level", getParam(exchange, "level"));
 			body.put("token", getParam(exchange, "token"));
 			post.setEntity(new StringEntity(Config.getInstance().getMapper().writeValueAsString(body), StandardCharsets.UTF_8));
-			CloseableHttpResponse response = FileIndexer.execute(post);
+			CloseableHttpResponse response = FileIndexer.client.execute(post);
 			return EntityUtils.toString(response.getEntity());
 		}else{
 			return logger(exchange);
@@ -491,7 +491,7 @@ public class PageHandler implements LightHttpHandler {
 		}
 	}
 
-	@SuppressWarnings({ "rawtypes", "serial" })
+	@SuppressWarnings({ "rawtypes" })
 	public static class Pager implements Serializable {
 		private int totalRows = -1;
 		private int pageSize = 12;

@@ -1,9 +1,11 @@
 package com.xlongwei.logserver;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,12 +19,11 @@ import com.networknt.utility.Tuple;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,8 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
     private static boolean logfile = System.getProperty("logfile") != null;
     private static boolean useIndexer = Boolean.getBoolean("useIndexer");
     private static File logs = new File(ExecUtil.logs);
-    private static CloseableHttpClient client = HttpClientBuilder.create().build();
+    private static RequestConfig config = RequestConfig.custom().setConnectionRequestTimeout(1000).setConnectTimeout(2000).setSocketTimeout(3000).build();
+    public static CloseableHttpClient client = HttpClients.custom().setDefaultRequestConfig(config).setMaxConnTotal(384).setMaxConnPerRoute(384).build();
     Tailer tailer = null;
 
     @Override
@@ -52,19 +54,14 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             tailer.stop();
         }
         try {
-            FileIndexer.client.close();
-            log.info("client close");
-        } catch (Exception e) {
+            client.close();
+        } catch (IOException e) {
         }
-    }
-
-    public static CloseableHttpResponse execute(HttpUriRequest request) throws Exception {
-        return client.execute(request);
     }
 
     static class IndexerListener extends TailerListenerAdapter {
         private int number = 0;
-        private List<Tuple<Integer, String>> lines = new LinkedList<>(), docs = null;
+        private Deque<Tuple<Integer, String>> lines = new LinkedList<>();
 
         @Override
         public void fileRotated() {
@@ -82,15 +79,13 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         public void init(Tailer tailer) {
             number = ExecUtil.count(logs.getName());
             log.info("number={}", number);
-            number += 3;// 有3行索引不到
+            // number += 3;// 有3行索引不到
             PageHandler.scheduler.submit(this::open);
+            PageHandler.scheduler.submit(this::docs);
         }
 
         @Override
         public void endOfFileReached() {
-            docs = lines;
-            lines = new LinkedList<>();
-            PageHandler.scheduler.submit(this::docs);
         }
 
         private void open() {
@@ -119,25 +114,37 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         }
 
         private void docs() {
-            if (this.docs == null || this.docs.isEmpty()) {
-                return;
-            }
-            try {
-                HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
-                List<Map<String, String>> docs = new LinkedList<>();
-                final String day = LocalDate.now().toString();
-                this.docs.forEach(pair -> {
-                    Map<String, String> doc = new HashMap<>();
-                    doc.put("day", day);
-                    doc.put("number", pair.first.toString());
-                    doc.put("line", pair.second);
-                    docs.add(doc);
-                });
-                Object body = Collections.singletonMap("add", docs);
-                String string = Config.getInstance().getMapper().writeValueAsString(body);
-                post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
-                client.execute(post);
-            } catch (Exception e) {
+            while(true){
+                if(!lines.isEmpty()) {
+                    final String day = LocalDate.now().toString();
+                    try {
+                        HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
+                        List<Map<String, String>> docs = new LinkedList<>();
+                        Tuple<Integer, String> pair = lines.poll();
+                        while(pair != null){
+                            Map<String, String> doc = new HashMap<>();
+                            doc.put("day", day);
+                            doc.put("number", pair.first.toString());
+                            doc.put("line", pair.second);
+                            docs.add(doc);
+                            if(docs.size() >= 100) {
+                                break;
+                            }else{
+                                pair = lines.poll();
+                            }
+                        }
+                        Object body = Collections.singletonMap("add", docs);
+                        String string = Config.getInstance().getMapper().writeValueAsString(body);
+                        post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
+                        client.execute(post);
+                    } catch (Exception e) {
+                    }
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    break;
+                }
             }
         }
 
