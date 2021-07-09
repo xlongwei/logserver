@@ -88,6 +88,13 @@ pre {
 							<input class="form-control" @keyup.enter="search" placeholder="search">
 						</div>
 						<a v-for="log in logs" class="btn" href="logs/{{log}}">{{log}}</a>
+						<div class="row">
+							<textarea rows="18" class="form-control" placeholder="mybatis log：&#13;&#10; ==>  Preparing: &#13;&#10; ==> Parameters:" v-model="mybatis.log"></textarea>
+						</div>
+						<a class="btn" @click="log2sql">log2sql</a>
+						<div class="row">
+							<textarea rows="8" class="form-control" v-model="mybatis.sql" readonly></textarea>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -117,6 +124,10 @@ pre {
 				totalPages: 0,
 				properties: '', //日志分页文本
 				others: []  //搜索出现页码列表
+			},
+			mybatis: {
+				log: '',
+				sql: ''
 			}
 		},
 		methods: {
@@ -196,6 +207,38 @@ pre {
 			},
 			open: function(page){
 				window.open(page, '_blank');
+			},
+			log2sql: function(){
+				if(!this.mybatis.log){
+					this.mybatis.sql = ''
+				}else{
+					var lines = this.mybatis.log.split(/[\r\n]+/);
+					var preparing = "Preparing: ", parameters = "Parameters: ";
+					lines.forEach((line,index)=>{
+						if(line && line.indexOf('==>')>0) {
+							var p1 = line.indexOf(preparing), p2 = line.indexOf(parameters);
+							if(p1 > 0) {
+								var sql = line.substring(p1 + preparing.length);
+								if(!sql.endsWith(';')) sql += ';'
+								this.mybatis.sql += (!this.mybatis.log ? '' : '\n') + sql;
+							}else if(p2 > 0){
+								var params = line.substring(p2 + parameters.length);
+								params = params.split(',')
+								params.forEach((param,index)=>{
+									param = param.substring(0,param.indexOf('(')).trim();
+									p1 = this.mybatis.sql.indexOf('?'), p2 = this.mybatis.sql.lastIndexOf('LIMIT', p1);
+									if(p1 > 0) {
+										if(p2 > 0 && p1-p2 < 10) {//LIMIT ? and LIMIT ?, ?
+											this.mybatis.sql = this.mybatis.sql.replace('?', param);
+										}else{
+											this.mybatis.sql = this.mybatis.sql.replace('?', '\'' + param + '\'');
+										}
+									}
+								})
+							}
+						}
+					})
+				}
 			}
 		},
 		ready: function(){
