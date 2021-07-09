@@ -49,12 +49,14 @@
 		data: {
 			logs: [{"logger":"ROOT","level":"DEBUG"}],
 			url: 'log',
+			appName: 'logserver',
 			urls: [],
 			levels: ['', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'TRACE', 'ALL', 'OFF']
 		},
 		methods: {
 			changeUrl: function(e){
 				this.url = e.target.value;
+				this.appName = e.target.options[e.target.selectedIndex].text;
 				this.loggers();
 			},
 			changeLevel: function(e){
@@ -63,7 +65,7 @@
 				var logger = loggerLevel[0] || document.querySelector('#logger').value;
 				if(!logger) return;
 				var token = prompt('请输入密码：');
-				this.$http({method:'POST', url:'log?type=loggers', params: {'url':this.url,'logger':logger,'level':loggerLevel[1],'token': token}}).then(function (response) {
+				this.$http({method:'GET', url:'log?type=loggers', params: {'appName':this.appName,'logger':logger,'level':loggerLevel[1],'token': token}}).then(function (response) {
 					this.loggers();
 				});
 			},
@@ -88,7 +90,7 @@
 				})
 			},
 			loggers: function(){
-				this.$http({method:'POST', url:'log?type=loggers', params:{url:this.url}}).then(function(response){
+				this.$http({method:'GET', url:'log?type=loggers', params:{'appName':this.appName}}).then(function(response){
 					this.logs = response.data.loggers;
 				})
 			}

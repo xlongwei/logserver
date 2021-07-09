@@ -180,7 +180,17 @@ public class PageHandler implements LightHttpHandler {
 	}
 
 	private String loggers(HttpServerExchange exchange) throws Exception {
-		String url = getParam(exchange, "url");
+		String url = getParam(exchange, "appName");
+		if (StringUtils.isNotBlank(url)) {
+			String[] split = System.getProperty("logger", "").split("[,]");
+			for (String nameUrl : split) {
+				String[] pair = nameUrl.split(("[@]"));
+				if (url.equals(pair[0])) {
+					url = pair[1];
+					break;
+				}
+			}
+		}
 		if(StringUtils.isNotBlank(url)&&url.startsWith("http")){
 			HttpPost post = new HttpPost(url);
 			post.addHeader("Content-Type", "application/json");
