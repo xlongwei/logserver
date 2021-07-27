@@ -1,7 +1,6 @@
 package com.xlongwei.logserver;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -12,19 +11,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.aliyuncs.http.FormatType;
+import com.aliyuncs.http.HttpRequest;
+import com.aliyuncs.http.MethodType;
+import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.networknt.config.Config;
 import com.networknt.server.ShutdownHookProvider;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.Tuple;
 
+import org.apache.commons.codec.CharEncoding;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,8 +33,6 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
     private static boolean logfile = System.getProperty("logfile") != null;
     private static boolean useIndexer = Boolean.getBoolean("useIndexer");
     private static File logs = new File(ExecUtil.logs);
-    private static RequestConfig config = RequestConfig.custom().setConnectionRequestTimeout(1000).setConnectTimeout(2000).setSocketTimeout(3000).build();
-    public static CloseableHttpClient client = HttpClients.custom().setDefaultRequestConfig(config).setMaxConnTotal(384).setMaxConnPerRoute(384).build();
     Tailer tailer = null;
 
     @Override
@@ -53,10 +50,6 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         if (tailer != null) {
             log.info("tailer stop");
             tailer.stop();
-        }
-        try {
-            client.close();
-        } catch (IOException e) {
         }
     }
 
@@ -91,7 +84,6 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
 
         private void open() {
             try {
-                HttpPost post = new HttpPost(lightSearch + "/service/index/open?name=logserver");
                 // logserver=day:string,number:int,line:text
                 List<Map<String, String>> fields = new LinkedList<>();
                 Map<String, String> map = new HashMap<>();
@@ -107,9 +99,11 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                 map.put("type", "text");
                 fields.add(map);
                 Object body = Collections.singletonMap("fields", fields);
-                String string = Config.getInstance().getMapper().writeValueAsString(body);
-                post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
-                client.execute(post);
+                String bodyString = Config.getInstance().getMapper().writeValueAsString(body);
+                HttpRequest request = new HttpRequest(lightSearch + "/service/index/open?name=logserver");
+                request.setSysMethod(MethodType.POST);
+                request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
+                ApacheHttpClient.getInstance().syncInvoke(request);
             } catch (Exception e) {
             }
         }
@@ -120,7 +114,6 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             }
             final String day = LocalDate.now().toString();
             try {
-                HttpPost post = new HttpPost(lightSearch + "/service/index/docs?name=logserver");
                 List<Map<String, String>> docs = new LinkedList<>();
                 Tuple<Integer, String> pair = lines.poll();
                 while(pair != null){
@@ -138,9 +131,11 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                 }
                 log.info("docs={}", docs.size());
                 Object body = Collections.singletonMap("add", docs);
-                String string = Config.getInstance().getMapper().writeValueAsString(body);
-                post.setEntity(new StringEntity(string, StandardCharsets.UTF_8));
-                client.execute(post);
+                String bodyString = Config.getInstance().getMapper().writeValueAsString(body);
+                HttpRequest request = new HttpRequest(lightSearch + "/service/index/docs?name=logserver");
+                request.setSysMethod(MethodType.POST);
+                request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
+                ApacheHttpClient.getInstance().syncInvoke(request);
             } catch (Exception e) {
             }
         }
@@ -152,8 +147,9 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                 String day = last.substring(last.lastIndexOf(".") + 1);
                 try {
                     // 删除day以前的日志索引
-                    HttpPost post = new HttpPost(lightSearch + "/service/logserver/delete?day=" + day);
-                    client.execute(post);
+                    HttpRequest request = new HttpRequest(lightSearch + "/service/logserver/delete?day=" + day);
+                    request.setSysMethod(MethodType.POST);
+                    ApacheHttpClient.getInstance().syncInvoke(request);
                 } catch (Exception e) {
                 }
             }

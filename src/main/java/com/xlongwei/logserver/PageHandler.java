@@ -29,6 +29,11 @@ import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsResponse.Record;
 import com.aliyuncs.alidns.model.v20150109.UpdateDomainRecordRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
+import com.aliyuncs.http.FormatType;
+import com.aliyuncs.http.HttpRequest;
+import com.aliyuncs.http.HttpResponse;
+import com.aliyuncs.http.MethodType;
+import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,16 +45,10 @@ import com.networknt.utility.StringUtils;
 import com.networknt.utility.Tuple;
 import com.networknt.utility.Util;
 
+import org.apache.commons.codec.CharEncoding;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,16 +190,17 @@ public class PageHandler implements LightHttpHandler {
 				}
 			}
 		}
-		if(StringUtils.isNotBlank(url)&&url.startsWith("http")){
-			HttpPost post = new HttpPost(url);
-			post.addHeader("Content-Type", "application/json");
+		if (StringUtils.isNotBlank(url) && url.startsWith("http")) {
 			Map<String, Object> body = new HashMap<>();
 			body.put("logger", getParam(exchange, "logger"));
 			body.put("level", getParam(exchange, "level"));
 			body.put("token", getParam(exchange, "token"));
-			post.setEntity(new StringEntity(Config.getInstance().getMapper().writeValueAsString(body), StandardCharsets.UTF_8));
-			CloseableHttpResponse response = FileIndexer.client.execute(post);
-			return EntityUtils.toString(response.getEntity());
+			String bodyString = Config.getInstance().getMapper().writeValueAsString(body);
+			HttpRequest request = new HttpRequest(url);
+			request.setSysMethod(MethodType.POST);
+			request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
+			HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+			return response.getHttpContentString();
 		}else{
 			return logger(exchange);
 		}
@@ -246,7 +246,7 @@ public class PageHandler implements LightHttpHandler {
 		return mapper.writeValueAsString(list);
 	}
 
-	private String page(HttpServerExchange exchange) throws JsonProcessingException {
+	private String page(HttpServerExchange exchange) throws Exception {
 		String search = getParam(exchange, "search");
 		String logs = getParam(exchange, "log");
 		Pager pager = new Pager();
@@ -273,28 +273,24 @@ public class PageHandler implements LightHttpHandler {
 	}
 
 	@SuppressWarnings({ "rawtypes" })
-	private List<Integer[]> pages(String logs, String search, int pageSize) {
+	private List<Integer[]> pages(String logs, String search, int pageSize) throws Exception {
 		if (Boolean.getBoolean("useSearch")) {
-			try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-				HttpPost post = new HttpPost(
-						lightSearch + "/service/logserver/pages?logs=" + logs + "&search=" + Util.urlEncode(search)
-								+ "&pageSize=" + pageSize);
-				CloseableHttpResponse execute = client.execute(post);
-				if (execute.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-					String string = EntityUtils.toString(execute.getEntity(), StandardCharsets.UTF_8);
-					Map map = mapper.readValue(string, Map.class);
-					Object object = map.get("pages");
-					if (object != null && object instanceof List) {
-						List<Integer[]> pages = new LinkedList<>();
-						List list = (List) object;
-						for (Object item : list) {
-							List arr = (List) item;
-							pages.add(new Integer[] { (Integer) arr.get(0), (Integer) arr.get(1) });
-						}
-						return pages;
-					}
+			String url = lightSearch + "/service/logserver/pages?logs=" + logs + "&search=" + Util.urlEncode(search)
+					+ "&pageSize=" + pageSize;
+			HttpRequest request = new HttpRequest(url);
+			request.setSysMethod(MethodType.POST);
+			HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+			String string = response.getHttpContentString();
+			Map map = mapper.readValue(string, Map.class);
+			Object object = map.get("pages");
+			if (object != null && object instanceof List) {
+				List<Integer[]> pages = new LinkedList<>();
+				List list = (List) object;
+				for (Object item : list) {
+					List arr = (List) item;
+					pages.add(new Integer[] { (Integer) arr.get(0), (Integer) arr.get(1) });
 				}
-			} catch (Exception e) {
+				return pages;
 			}
 			return Collections.emptyList();
 		} else {
