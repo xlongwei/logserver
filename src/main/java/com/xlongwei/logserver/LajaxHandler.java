@@ -79,8 +79,9 @@ public class LajaxHandler implements LightHttpHandler {
 								map.put("openid", openid);
 								map.put("text", description);
 							}
+							String bodyString = Config.getInstance().getMapper().writeValueAsString(map);
 							request.setSysMethod(MethodType.POST);
-							request.setHttpContent(description.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
+							request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
 									FormatType.JSON);
 							HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
 							log.info(response.getHttpContentString());
