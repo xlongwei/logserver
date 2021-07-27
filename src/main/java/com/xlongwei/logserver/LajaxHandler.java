@@ -1,15 +1,23 @@
 package com.xlongwei.logserver;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.aliyuncs.http.FormatType;
+import com.aliyuncs.http.HttpRequest;
+import com.aliyuncs.http.HttpResponse;
+import com.aliyuncs.http.MethodType;
+import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.networknt.body.BodyHandler;
+import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.utility.StringUtils;
+
+import org.apache.commons.codec.CharEncoding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -25,6 +33,7 @@ public class LajaxHandler implements LightHttpHandler {
 	public static final HttpString ACCESS_CONTROL_ALLOW_HEADERS = new HttpString("Access-Control-Allow-Headers");
 	private static final Logger log = LoggerFactory.getLogger("lajax");
 	public static final String token = System.getProperty("lajax.token");
+	public static final String apiUrl = System.getProperty("apiUrl", "https://api.xlongwei.com");
 	private static final String LAJAX_LOG_FORMAT = "lajax {} {} {}: {}, url={}, agent={}";
 	
 	@Override
@@ -41,8 +50,48 @@ public class LajaxHandler implements LightHttpHandler {
 	    		return;
 	    	}
 		}
-		if(StringUtils.isBlank(token) || token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
-			Object body = exchange.getAttachment(BodyHandler.REQUEST_BODY);
+		Object body = exchange.getAttachment(BodyHandler.REQUEST_BODY);
+		if (body == null || body instanceof Map) {
+			if (body != null) {
+				Map map = (Map) body;
+				body = map.get("commonAnnotations");
+				if (body != null && body instanceof Map) {
+					log.info(Config.getInstance().getMapper()
+							.writeValueAsString(exchange.getAttachment(BodyHandler.REQUEST_BODY)));
+					map = (Map) body;
+					String description = map.getOrDefault("description", "").toString();
+					if (StringUtils.isNotBlank(description)) {
+						log.warn(description);
+						try {
+							String email = PageHandler.getParam(exchange, "email");
+							HttpRequest request = null;
+							map = new HashMap<>();
+							if (StringUtils.isNotBlank(email)) {
+								request = new HttpRequest(apiUrl + "/service/checkcode/email");
+								map.put("toEmail", email);
+								map.put("showapi_userName", "prometheus");
+								map.put("title", map.getOrDefault("summary", "").toString());
+								map.put("checkcode", description);
+							} else {
+								request = new HttpRequest(apiUrl + "/service/weixin/notify");
+								String openid = ExecUtil.firstNotBlank(PageHandler.getParam(exchange, "openid"),
+										"oNlp_wiCfSmCEnpYqHoroD8t07t4");
+								map.put("openid", openid);
+								map.put("text", description);
+							}
+							request.setSysMethod(MethodType.POST);
+							request.setHttpContent(description.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
+									FormatType.JSON);
+							HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+							log.info(response.getHttpContentString());
+						} catch (Exception e) {
+							log.warn(e.getMessage());
+						}
+					}
+				}
+			}
+		} else if (StringUtils.isBlank(token)
+				|| token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
 			//[{time,level,messages:["{reqId}",arg1,...args],url,agent}]
 			try {
 				((List)body).forEach(item -> {
