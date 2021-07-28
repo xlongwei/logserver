@@ -30,10 +30,12 @@ import com.aliyuncs.alidns.model.v20150109.UpdateDomainRecordRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
 import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
 import com.aliyuncs.http.FormatType;
+import com.aliyuncs.http.HttpClientConfig;
+import com.aliyuncs.http.HttpClientFactory;
 import com.aliyuncs.http.HttpRequest;
 import com.aliyuncs.http.HttpResponse;
+import com.aliyuncs.http.IHttpClient;
 import com.aliyuncs.http.MethodType;
-import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -65,6 +67,7 @@ import io.undertow.util.MimeMappings;
  */
 public class PageHandler implements LightHttpHandler {
 	public static final ScheduledThreadPoolExecutor scheduler;
+	public static IHttpClient httpClient;
 	private ObjectMapper mapper = Config.getInstance().getMapper();
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
 	private static final Logger log = LoggerFactory.getLogger(PageHandler.class);
@@ -88,10 +91,21 @@ public class PageHandler implements LightHttpHandler {
 	
 	public PageHandler() {
 		String accessKeyId = System.getenv("accessKeyId"), regionId = ExecUtil.firstNotBlank(System.getenv("regionId"), "cn-hangzhou"), secret = System.getenv("secret");
-		metricEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
-		dnsEnabled = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret) && StringUtils.isNotBlank(regionId) && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
+		boolean configNonBlank = StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secret)
+				&& StringUtils.isNotBlank(regionId);
+		metricEnabled = configNonBlank && !"false".equalsIgnoreCase(System.getenv("metricEnabled"));
+		dnsEnabled = configNonBlank && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
 		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
-		client = StringUtils.isBlank(accessKeyId) || StringUtils.isBlank(secret) || StringUtils.isBlank(regionId) ? null : new DefaultAcsClient(profile = DefaultProfile.getProfile(regionId, accessKeyId, secret));
+		profile = DefaultProfile.getProfile(regionId, accessKeyId, secret);
+		HttpClientConfig config = profile.getHttpClientConfig();
+		// config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
+		config.setIgnoreSSLCerts(true);
+		if (configNonBlank) {
+			client = new DefaultAcsClient(profile);
+			httpClient = ((DefaultAcsClient) client).getHttpClient();
+		} else {
+			httpClient = HttpClientFactory.buildClient(profile);
+		}
 		//每15秒上报一次统计数据，每4个小时清理一下统计数据
 		scheduler.scheduleWithFixedDelay(this::putCustomMetrics, 15, 15, TimeUnit.SECONDS);
 		Calendar calendar = Calendar.getInstance();
@@ -199,7 +213,7 @@ public class PageHandler implements LightHttpHandler {
 			HttpRequest request = new HttpRequest(url);
 			request.setSysMethod(MethodType.POST);
 			request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
-			HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+			HttpResponse response = httpClient.syncInvoke(request);
 			return response.getHttpContentString();
 		}else{
 			return logger(exchange);
@@ -279,7 +293,7 @@ public class PageHandler implements LightHttpHandler {
 					+ "&pageSize=" + pageSize;
 			HttpRequest request = new HttpRequest(url);
 			request.setSysMethod(MethodType.POST);
-			HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+			HttpResponse response = httpClient.syncInvoke(request);
 			String string = response.getHttpContentString();
 			Map map = mapper.readValue(string, Map.class);
 			Object object = map.get("pages");

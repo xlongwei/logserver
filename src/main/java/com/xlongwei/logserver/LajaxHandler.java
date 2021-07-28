@@ -83,7 +83,7 @@ public class LajaxHandler implements LightHttpHandler {
 							request.setSysMethod(MethodType.POST);
 							request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
 									FormatType.JSON);
-							HttpResponse response = ApacheHttpClient.getInstance().syncInvoke(request);
+							HttpResponse response = PageHandler.httpClient.syncInvoke(request);
 							log.info(response.getHttpContentString());
 						} catch (Exception e) {
 							log.warn(e.getMessage());

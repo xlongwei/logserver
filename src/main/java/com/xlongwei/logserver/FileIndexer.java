@@ -103,7 +103,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                 HttpRequest request = new HttpRequest(lightSearch + "/service/index/open?name=logserver");
                 request.setSysMethod(MethodType.POST);
                 request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
-                ApacheHttpClient.getInstance().syncInvoke(request);
+                PageHandler.httpClient.syncInvoke(request);
             } catch (Exception e) {
             }
         }
@@ -135,7 +135,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                 HttpRequest request = new HttpRequest(lightSearch + "/service/index/docs?name=logserver");
                 request.setSysMethod(MethodType.POST);
                 request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
-                ApacheHttpClient.getInstance().syncInvoke(request);
+                PageHandler.httpClient.syncInvoke(request);
             } catch (Exception e) {
             }
         }
@@ -149,7 +149,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
                     // 删除day以前的日志索引
                     HttpRequest request = new HttpRequest(lightSearch + "/service/logserver/delete?day=" + day);
                     request.setSysMethod(MethodType.POST);
-                    ApacheHttpClient.getInstance().syncInvoke(request);
+                    PageHandler.httpClient.syncInvoke(request);
                 } catch (Exception e) {
                 }
             }
