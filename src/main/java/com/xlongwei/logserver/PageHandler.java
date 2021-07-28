@@ -50,6 +50,7 @@ import com.networknt.utility.Util;
 import org.apache.commons.codec.CharEncoding;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -253,9 +254,29 @@ public class PageHandler implements LightHttpHandler {
 		return mapper.writeValueAsString(map);
 	}
 
-	private String list(HttpServerExchange exchange) throws JsonProcessingException {
+	@SuppressWarnings({ "rawtypes" })
+	private String list(HttpServerExchange exchange) throws Exception {
 		String search = getParam(exchange, "search");
-		List<String> list = ExecUtil.list(search);
+		List<String> list = null;
+		if (StringUtils.isBlank(search)) {
+			list = ExecUtil.list(search);
+		} else {
+			String url = lightSearch + "/service/logserver/list" + "?search=" + Util.urlEncode(search);
+			HttpRequest request = new HttpRequest(url);
+			request.setSysMethod(MethodType.POST);
+			HttpResponse response = httpClient.syncInvoke(request);
+			String string = response.getHttpContentString();
+			Map map = mapper.readValue(string, Map.class);
+			Object object = map.get("list");
+			if (object != null && object instanceof List) {
+				List days = (List) object;
+				String prefix = FilenameUtils.getName(ExecUtil.logs) + ".";
+				list = new ArrayList<>();
+				for (Object day : days) {
+					list.add(prefix + day.toString());
+				}
+			}
+		}
 		log.info("page logs list: {}", search);
 		return mapper.writeValueAsString(list);
 	}

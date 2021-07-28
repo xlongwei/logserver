@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.http.HttpRequest;
 import com.aliyuncs.http.MethodType;
-import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.networknt.config.Config;
 import com.networknt.server.ShutdownHookProvider;
 import com.networknt.server.StartupHookProvider;
