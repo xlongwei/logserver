@@ -3,6 +3,7 @@ package com.xlongwei.logserver;
 import java.io.File;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -261,6 +262,7 @@ public class PageHandler implements LightHttpHandler {
 		if (StringUtils.isBlank(search)) {
 			list = ExecUtil.list(search);
 		} else {
+			list = new ArrayList<>();
 			String url = lightSearch + "/service/logserver/list" + "?search=" + Util.urlEncode(search);
 			HttpRequest request = new HttpRequest(url);
 			request.setSysMethod(MethodType.POST);
@@ -270,10 +272,15 @@ public class PageHandler implements LightHttpHandler {
 			Object object = map.get("list");
 			if (object != null && object instanceof List) {
 				List days = (List) object;
-				String prefix = FilenameUtils.getName(ExecUtil.logs) + ".";
-				list = new ArrayList<>();
+				String logs = FilenameUtils.getName(ExecUtil.logs);
+				String today = LocalDate.now().toString();
 				for (Object day : days) {
-					list.add(prefix + day.toString());
+					String dayString = day.toString();
+					if (today.equals(dayString)) {
+						list.add(logs);
+					} else {
+						list.add(logs + "." + dayString);
+					}
 				}
 			}
 		}
