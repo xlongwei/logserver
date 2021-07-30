@@ -9,7 +9,6 @@ import com.aliyuncs.http.FormatType;
 import com.aliyuncs.http.HttpRequest;
 import com.aliyuncs.http.HttpResponse;
 import com.aliyuncs.http.MethodType;
-import com.aliyuncs.http.clients.ApacheHttpClient;
 import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
@@ -64,27 +63,45 @@ public class LajaxHandler implements LightHttpHandler {
 						log.warn(description);
 						try {
 							String email = PageHandler.getParam(exchange, "email");
+							String openid = PageHandler.getParam(exchange, "openid");
 							HttpRequest request = null;
 							map = new HashMap<>();
-							if (StringUtils.isNotBlank(email)) {
-								request = new HttpRequest(apiUrl + "/service/checkcode/email");
-								map.put("toEmail", email);
-								map.put("showapi_userName", "prometheus");
-								map.put("title", map.getOrDefault("summary", "").toString());
-								map.put("checkcode", description);
-							} else {
+							if (StringUtils.isBlank(email) && StringUtils.isBlank(openid)) {
 								request = new HttpRequest(apiUrl + "/service/weixin/notify");
-								String openid = ExecUtil.firstNotBlank(PageHandler.getParam(exchange, "openid"),
-										"oNlp_wiCfSmCEnpYqHoroD8t07t4");
-								map.put("openid", openid);
+								map.put("openid", "oNlp_wiCfSmCEnpYqHoroD8t07t4");
 								map.put("text", description);
+								String bodyString = Config.getInstance().getMapper().writeValueAsString(map);
+								request.setSysMethod(MethodType.POST);
+								request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
+										FormatType.JSON);
+								HttpResponse response = PageHandler.httpClient.syncInvoke(request);
+								log.info(response.getHttpContentString());
+							} else {
+								if (StringUtils.isNotBlank(email)) {
+									request = new HttpRequest(apiUrl + "/service/checkcode/email");
+									map.put("toEmail", email);
+									map.put("showapi_userName", "prometheus");
+									map.put("title", map.getOrDefault("summary", "").toString());
+									map.put("checkcode", description);
+									String bodyString = Config.getInstance().getMapper().writeValueAsString(map);
+									request.setSysMethod(MethodType.POST);
+									request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
+											FormatType.JSON);
+									HttpResponse response = PageHandler.httpClient.syncInvoke(request);
+									log.info(response.getHttpContentString());
+								}
+								if (StringUtils.isNotBlank(openid)) {
+									request = new HttpRequest(apiUrl + "/service/weixin/notify");
+									map.put("openid", openid);
+									map.put("text", description);
+									String bodyString = Config.getInstance().getMapper().writeValueAsString(map);
+									request.setSysMethod(MethodType.POST);
+									request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
+											FormatType.JSON);
+									HttpResponse response = PageHandler.httpClient.syncInvoke(request);
+									log.info(response.getHttpContentString());
+								}
 							}
-							String bodyString = Config.getInstance().getMapper().writeValueAsString(map);
-							request.setSysMethod(MethodType.POST);
-							request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8,
-									FormatType.JSON);
-							HttpResponse response = PageHandler.httpClient.syncInvoke(request);
-							log.info(response.getHttpContentString());
 						} catch (Exception e) {
 							log.warn(e.getMessage());
 						}
