@@ -99,8 +99,9 @@ public class PageHandler implements LightHttpHandler {
 		dnsEnabled = configNonBlank && !"false".equalsIgnoreCase(System.getenv("dnsEnabled"));
 		log.info("accessKeyId={}, metricEnabled={}, regionId={}, recordId={}, dnsEnabled={}", accessKeyId, metricEnabled, regionId, recordId, dnsEnabled);
 		profile = DefaultProfile.getProfile(regionId, accessKeyId, secret);
+		profile.setCloseTrace(true);// 关闭opentracing但是依赖不能去除
 		HttpClientConfig config = profile.getHttpClientConfig();
-		// config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
+		config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
 		config.setIgnoreSSLCerts(true);
 		if (configNonBlank) {
 			client = new DefaultAcsClient(profile);
