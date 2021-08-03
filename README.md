@@ -1,7 +1,7 @@
 ## logserver
 
 ##### 项目简介
-使用logback和light-4j构建的简单日志服务，参考项目[logbackserver](https://gitee.com/xlongwei/logbackserver)和[light4j](https://gitee.com/xlongwei/light4j)。
+使用logback和light-4j构建的简单日志服务，参考项目[logbackserver](https://gitee.com/xlongwei/logbackserver)和[light4j](https://gitee.com/xlongwei/light4j)。logserver的设计初衷是聚合日志，解决登录多个linux主机查找日志的痛点。日志量大时使用grep方式有性能瓶颈，因此可选使用[light-search](https://gitee.com/lightgrp/light-search)创建索引和搜索。
 
 ##### 本地测试
 
@@ -72,6 +72,10 @@ management: #需要依赖spring-boot-starter-actuator
 	});
 
 ##### 演示图
+
+设计图：底层使用logback+socket、lajax+http传输日志，后端推荐logback.xml方式，可选starter依赖，前端支持web和uni-app形式，logserver可选使用light-search+lucene创建索引，详细用法见[wiki](https://gitee.com/xlongwei/logserver/wikis)。
+
+![logserver](http://t.xlongwei.com/images/logserver/logserver.png)
 
 演示地址：[https://log.xlongwei.com/](https://log.xlongwei.com/)
 
