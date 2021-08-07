@@ -15,7 +15,7 @@ Lajax.prototype._log = function(time, level, ...args){
 			this._pushToQueue(time, level, ...args);
 		}
 	}
-}
+};
 Lajax.prototype._send = function(){
     const logCount = this.queue.length;
     if (logCount) {
@@ -64,7 +64,7 @@ Lajax.prototype._send = function(){
             this.xhr = null;
         }
     }
-}
+};
 var logger = new Lajax({
 	url:'lajax',//日志服务器的 URL
 	autoLogError:false,//是否自动记录未捕获错误true
