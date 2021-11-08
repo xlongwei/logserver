@@ -73,7 +73,7 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
             number = ExecUtil.count(logs.getName());
             log.info("number={}", number);
             // number += 3;// 有3行索引不到
-            PageHandler.scheduler.submit(this::open);
+            PageHandler.scheduler.schedule(this::open, 3, TimeUnit.SECONDS);
             PageHandler.scheduler.scheduleWithFixedDelay(this::docs, 10, 10, TimeUnit.SECONDS);
         }
 
