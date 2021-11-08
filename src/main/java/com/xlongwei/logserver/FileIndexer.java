@@ -83,23 +83,27 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
 
         private void open() {
             try {
-                // logserver=day:string,number:int,line:text
+                // logserver=day:string:no,number:int,line:text
                 List<Map<String, String>> fields = new LinkedList<>();
                 Map<String, String> map = new HashMap<>();
                 map.put("field", "day");
                 map.put("type", "string");
+                map.put("store", "no");
                 fields.add(map);
                 map = new HashMap<>();
                 map.put("field", "number");
-                map.put("type", "store");
+                map.put("type", "int");
                 fields.add(map);
                 map = new HashMap<>();
                 map.put("field", "line");
                 map.put("type", "text");
                 fields.add(map);
-                Object body = Collections.singletonMap("fields", fields);
+                Map<String, Object> body = new HashMap<>();
+                body.put("fields", fields);
+                body.put("realtime", "true");
                 String bodyString = Config.getInstance().getMapper().writeValueAsString(body);
-                HttpRequest request = new HttpRequest(lightSearch + "/service/index/open?name=logserver");
+                HttpRequest request = new HttpRequest(
+                        lightSearch + "/service/index/open?name=logserver&token=" + LajaxHandler.token);
                 request.setSysMethod(MethodType.POST);
                 request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
                 PageHandler.httpClient.syncInvoke(request);
@@ -108,23 +112,23 @@ public class FileIndexer implements StartupHookProvider, ShutdownHookProvider {
         }
 
         private void docs() {
-            if(lines.isEmpty()) {
+            if (lines.isEmpty()) {
                 return;
             }
             final String day = LocalDate.now().toString();
             try {
                 List<Map<String, String>> docs = new LinkedList<>();
                 Tuple<Integer, String> pair = lines.poll();
-                while(pair != null){
+                while (pair != null) {
                     Map<String, String> doc = new HashMap<>();
                     doc.put("day", day);
                     doc.put("number", pair.first.toString());
                     doc.put("line", pair.second);
                     docs.add(doc);
-                    if(docs.size() >= 100) {
+                    if (docs.size() >= 100) {
                         log.info("lines remaining={}", lines.size());
                         break;
-                    }else{
+                    } else {
                         pair = lines.poll();
                     }
                 }
