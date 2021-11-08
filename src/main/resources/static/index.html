@@ -168,7 +168,7 @@ pre {
 						this.pager.totalPages = response.data.totalPages;
 						//搜索出现页码只需查询一次，当totalRows=0时查询并获取结果
 						this.pager.others = !response.data.others ? [] : response.data.others;
-						if(this.pager.others.length > 0 && this.pager.others[0] > 1) {
+						if(this.pager.others.length > 0 && this.pager.others[0][0] > 1) {
 							this.page(this.pager.others[0][0]);
 						}
 					}else{
