@@ -33,7 +33,7 @@ public class LajaxHandler implements LightHttpHandler {
 	private static final Logger log = LoggerFactory.getLogger("lajax");
 	public static final String token = System.getProperty("lajax.token");
 	public static final String apiUrl = System.getProperty("apiUrl", "https://api.xlongwei.com");
-	private static final String LAJAX_LOG_FORMAT = "lajax {} {} {}: {}, url={}, agent={}";
+	private static final String LAJAX_LOG_FORMAT = "{} {} {} {}: {}, url={}, agent={}";
 	
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -44,6 +44,7 @@ public class LajaxHandler implements LightHttpHandler {
 			responseHeaders.add(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
 			responseHeaders.add(ACCESS_CONTROL_ALLOW_METHODS, "POST");
 	    	responseHeaders.add(ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type");
+	    	responseHeaders.add(ACCESS_CONTROL_ALLOW_HEADERS, "X-Request-Token");
 	    	if(Methods.OPTIONS.equals(exchange.getRequestMethod())) {
 	    		exchange.setStatusCode(HttpURLConnection.HTTP_OK);
 	    		return;
@@ -108,10 +109,11 @@ public class LajaxHandler implements LightHttpHandler {
 					}
 				}
 			}
-		} else if (StringUtils.isBlank(token)
-				|| token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token"))) {
+		} else {
 			//[{time,level,messages:["{reqId}",arg1,...args],url,agent}]
 			try {
+				String token = exchange.getRequestHeaders().getFirst("X-Request-Token");
+				final String contextName = StringUtils.isBlank(token) ? "lajax" : token;
 				((List)body).forEach(item -> {
 					Map map = (Map)item;
 					String level = ((String)(map).get("level")).toUpperCase();
@@ -123,11 +125,11 @@ public class LajaxHandler implements LightHttpHandler {
 					Object url = map.get("url");
 					Object agent = map.get("agent");
 					if("info".equals(level)) {
-						log.info(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
+						log.info(LAJAX_LOG_FORMAT, contextName, time, level, reqId, message, url, agent);
 					}else if("warn".equals(level)) {
-						log.warn(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
+						log.warn(LAJAX_LOG_FORMAT, contextName, time, level, reqId, message, url, agent);
 					}else {
-						log.error(LAJAX_LOG_FORMAT, time, level, reqId, message, url, agent);
+						log.error(LAJAX_LOG_FORMAT, contextName, time, level, reqId, message, url, agent);
 					}
 				});
 			}catch(Exception e) {
