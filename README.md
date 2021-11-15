@@ -8,7 +8,10 @@
 1. 项目构建：mvn package dependency:copy-dependencies -DoutputDirectory=target
 2. 运行服务：start.bat，打开首页[index](http://localhost:9880/index.html)，点开[tail](http://localhost:9880/tail.html)跟踪日志
 3. client测试：client.bat，输入测试内容，浏览器会输出最新日志
-4. 索引服务：-Dlight-search=http://localhost:9200 -DuseIndexer=true -DuseSearch=true
+4. [light-search](https://gitee.com/lightgrp/light-search)索引服务：-Dlight-search=http://localhost:9200 -DuseIndexer=true -DuseSearch=true
+5. logger页签：可以动态变更应用日志级别，-Dlogger=name@url静态配置其他应用，[logserver-spring-boot-starter](https://gitee.com/xlongwei/logserver-spring-boot-starter)支持自动注册，变更时需要密码
+6. [trace](https://gitee.com/xlongwei/logserver/wikis/trace)跟踪日志：提供请求头[X-Traceability-Id](http://t.xlongwei.com/images/logserver/search.png)即可，后端通过[MyCorrelationHandler](https://gitee.com/xlongwei/light4j/blob/master/src/main/resources/config/handler.yml)写入MDC，并会在跨应用请求时传递此请求头
+7. sift分开存储：-Dsift，根据contextName分开存储日志，不参与搜索和索引，因此-Dlogfile依然需要，如果在root去掉ASYNC_FILE，则需要修改sift内的notify=true，以便向浏览器输出日志。
 
 ##### 线上部署
 
@@ -52,26 +55,28 @@ management: #需要依赖spring-boot-starter-actuator
 
 1. [lajax](https://github.com/eshengsky/lajax)：var logger = new Lajax(url); logger.info(arg1,...args);
 2. [logserver.js](https://log.xlongwei.com/logserver.js)：Lajax.logLevel='info'; Lajax.logServer=false; Lajax.logConsole=true; Lajax.token='xlongwei';
+3. [uni-app](https://gitee.com/xlongwei/apidemo/blob/master/common/logserver.js)：var logger = require('../../common/logserver.js').logger; logger.info('onReady index.vue');
 
->
-	var logger = new Lajax({
-		url:'/lajax',//日志服务器的 URL
-		autoLogError:false,//是否自动记录未捕获错误true
-		autoLogRejection:false,//是否自动记录Promise错误true
-		autoLogAjax:false,//是否自动记录 ajax 请求true
-		//logAjaxFilter:function(ajaxUrl, ajaxMethod) {
-		//	return false;//ajax 自动记录条件过滤函数true记录false不记录
-		//},
-		stylize:true,//是否要格式化 console 打印的内容true
-		showDesc:false,//是否显示初始化描述信息true
-		//customDesc:function(lastUnsend, reqId, idFromServer) {
-		//	return 'lajax 前端日志模块加载完成。';
-		//},
-		interval: 5000,//日志发送到服务端的间隔时间10000毫秒
-		maxErrorReq:3 //发送日志请求连续出错的最大次数
-	});
+```
+var logger = new Lajax({
+	url:'/lajax',//日志服务器的 URL
+	autoLogError:false,//是否自动记录未捕获错误true
+	autoLogRejection:false,//是否自动记录Promise错误true
+	autoLogAjax:false,//是否自动记录 ajax 请求true
+	//logAjaxFilter:function(ajaxUrl, ajaxMethod) {
+	//	return false;//ajax 自动记录条件过滤函数true记录false不记录
+	//},
+	stylize:true,//是否要格式化 console 打印的内容true
+	showDesc:false,//是否显示初始化描述信息true
+	//customDesc:function(lastUnsend, reqId, idFromServer) {
+	//	return 'lajax 前端日志模块加载完成。';
+	//},
+	interval: 5000,//日志发送到服务端的间隔时间10000毫秒
+	maxErrorReq:3 //发送日志请求连续出错的最大次数
+});
+```
 
-##### 演示图
+##### 整体设计
 
 设计图：底层使用logback+socket、lajax+http传输日志，后端推荐logback.xml方式，可选starter依赖，前端支持web和uni-app形式，logserver可选使用light-search+lucene创建索引，详细用法见[wiki](https://gitee.com/xlongwei/logserver/wikis)。
 
@@ -79,7 +84,7 @@ management: #需要依赖spring-boot-starter-actuator
 
 演示地址：[https://log.xlongwei.com/](https://log.xlongwei.com/)
 
-![index](http://t.xlongwei.com/images/logserver/index.png)
+![search](http://t.xlongwei.com/images/logserver/search.png)
 
 
 ##### Nginx配置
