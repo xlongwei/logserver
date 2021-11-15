@@ -14,6 +14,7 @@ import ch.qos.logback.core.pattern.PatternLayoutEncoderBase;
  */
 public class PatternsLayoutEncoder extends PatternLayoutEncoderBase<ILoggingEvent> {
 	Layout<ILoggingEvent> simple = null, origin = null;
+    boolean notify = true;
 	
     @Override
     public void start() {
@@ -32,6 +33,14 @@ public class PatternsLayoutEncoder extends PatternLayoutEncoderBase<ILoggingEven
     	super.start();
     }
     
+    public boolean isNotify() {
+        return notify;
+    }
+
+    public void setNotify(boolean notify) {
+        this.notify = notify;
+    }
+
     @Override
     public byte[] encode(ILoggingEvent event) {
     	String name = event.getLoggerName();
@@ -42,7 +51,9 @@ public class PatternsLayoutEncoder extends PatternLayoutEncoderBase<ILoggingEven
     	}
     	String txt = layout.doLayout(event);
     	txt = MaskUtil.mask(txt);
-    	TailCallback.notify(txt);
+    	if(notify) {
+            TailCallback.notify(txt);
+        }
     	Charset charset = getCharset();
     	if (charset == null) {
             return txt.getBytes();

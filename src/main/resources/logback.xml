@@ -32,6 +32,25 @@
 				<QueueSize>10240</QueueSize>
 				<IncludeCallerData>true</IncludeCallerData>
 			</appender>
+			<if condition='isDefined("sift")'><then>
+				<appender name="SIFT" class="ch.qos.logback.classic.sift.SiftingAppender">
+					<discriminator class="ch.qos.logback.classic.sift.ContextBasedDiscriminator">
+						<defaultValue>sift</defaultValue>
+					</discriminator>
+					<sift>
+						<appender name="sift-${contextName:-sift}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+							<file>logs/${contextName:-sift}.log</file>
+							<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+								<fileNamePattern>${contextName:-sift}.log.%d{yyyy-MM-dd}</fileNamePattern>
+							</rollingPolicy>
+							<encoder class="com.xlongwei.logserver.PatternsLayoutEncoder">
+								<pattern>${logPattern}</pattern>
+								<notify>false</notify>
+							</encoder>
+						</appender>
+					</sift>
+				</appender>
+			</then></if>
 	    </then>
     </if>
     
@@ -100,6 +119,9 @@
 		<if condition='isDefined("logfile")'>
 		    <then>
 				<appender-ref ref="ASYNC_FILE" />
+				<if condition='isDefined("sift")'><then>
+					<appender-ref ref="SIFT" />
+				</then></if>
 		    </then>
 			<else>
 				<appender-ref ref="STDOUT" />
