@@ -12,6 +12,7 @@
 5. logger页签：可以动态变更应用日志级别，-Dlogger=name@url静态配置其他应用，[logserver-spring-boot-starter](https://gitee.com/xlongwei/logserver-spring-boot-starter)支持自动注册，变更时需要密码
 6. [trace](https://gitee.com/xlongwei/logserver/wikis/trace)跟踪日志：提供请求头[X-Traceability-Id](http://t.xlongwei.com/images/logserver/search.png)即可，后端通过[MyCorrelationHandler](https://gitee.com/xlongwei/light4j/blob/master/src/main/resources/config/handler.yml)写入MDC，并会在跨应用请求时传递此请求头
 7. sift分开存储：-Dsift，根据contextName分开存储日志，不参与搜索和索引，因此-Dlogfile依然需要，如果在root去掉ASYNC_FILE，则需要修改sift内的notify=true，以便向浏览器输出日志。
+8. my.pwd保存私密信息，-Dlogback.configurationFile=/home/logback.xml可以指定外部日志配置，编辑此文件即可变更日志级别。
 
 ##### 线上部署
 

@@ -41,7 +41,7 @@
 						<appender name="sift-${contextName:-sift}" class="ch.qos.logback.core.rolling.RollingFileAppender">
 							<file>logs/${contextName:-sift}.log</file>
 							<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-								<fileNamePattern>${contextName:-sift}.log.%d{yyyy-MM-dd}</fileNamePattern>
+								<fileNamePattern>logs/${contextName:-sift}.log.%d{yyyy-MM-dd}</fileNamePattern>
 							</rollingPolicy>
 							<encoder class="com.xlongwei.logserver.PatternsLayoutEncoder">
 								<pattern>${logPattern}</pattern>

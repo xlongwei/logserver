@@ -5,12 +5,14 @@ appname=logserver
 #filebeat=filebeat.log,filebeat2.log
 logfile=/var/log/logserver/all.logs
 jarfile=target/$appname.jar
+pwdfile=./my.pwd
 [ ! -e "$jarfile" ] && jarfile=$appname.jar
+[ -e $pwdfile ] && source $pwdfile
 Survivor=1 Old=16 NewSize=$[Survivor*10] Xmx=$[NewSize+Old] #NewSize=Survivor*(1+1+8) Xmx=NewSize+Old
 JVM_OPS="-Xmx${Xmx}m -Xms${Xmx}m -XX:NewSize=${NewSize}m -XX:MaxNewSize=${NewSize}m -XX:SurvivorRatio=8 -Xss228k"
 #JVM_OPS="$JVM_OPS -Dredis -Dredis.host=localhost -Dredis.port=6379 -Dredis.pubsub=true -Dredis.pushpop=true -Dredis.queueSize=10240"
-JVM_OPS="$JVM_OPS -Djava.compiler=none -Dlajax.token=xlongwei -DcontextName=$appname -DlogLength=2048"
-ENV_OPS="$ENV_OPS accessKeyId=`[ -e /etc/aliyun.accessKeyId ] &&  cat /etc/aliyun.accessKeyId` secret=`[ -e /etc/aliyun.secret ] &&  cat /etc/aliyun.secret`"
+JVM_OPS="$JVM_OPS -Djava.compiler=none -Dlajax.token=${token:-xlongwei} -DcontextName=$appname -DlogLength=2048 -Dlogback.configurationFile=classpath:logback.xml"
+ENV_OPS="$ENV_OPS accessKeyId=${accessKeyId:-} secret=${secret:-}"
 ENV_OPS="$ENV_OPS regionId=cn-hangzhou domainName=xlongwei.com recordId=4012091293697024"
 JVM_OPS="$JVM_OPS -Dfiles=false -Dlogger=logserver@log -Dmask=passw(3,15);token(3,15)"
 #JVM_OPS="$JVM_OPS -Dfiles=true -Dlogger=logserver@log,apidoc@https://api.xlongwei.com/apidoc/demo/log.htm,bpmdemo@https://bpm.xlongwei.com/demo/demo/log,cms@https://cms.xlongwei.com/demo/log.json,light4j@https://api.xlongwei.com/demo/log,search@https://log.xlongwei.com/service/logserver/log"
