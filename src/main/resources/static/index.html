@@ -23,9 +23,9 @@ pre {
 		<div class="tabs-container">
 			<ul class="nav nav-tabs">
 				<!-- <li v-for="tab in tabs" :class="{active:tabName==tab}"><a data-toggle="tab" href="#tab-{{tab}}">{{tab}}</a></li> -->
-				<li class="active"><a data-toggle="tab" href="#tab-tail" @dblclick="open('tail.html')" title="实时跟踪最新日志，使用WebSocket技术">tail</a></li>
-				<li class=""><a data-toggle="tab" href="#tab-page" @dblclick="open('page.html')" title="分页查看最近日志，支持搜索">page</a></li>
-				<li class=""><a data-toggle="tab" href="#tab-logs" @dblclick="open('log.html')" title="下载最近日志文件">logs</a></li>
+				<li class="active"><a data-toggle="tab" href="#tab-tail" title="实时跟踪最新日志，使用WebSocket技术">tail</a></li>
+				<li class=""><a data-toggle="tab" href="#tab-page" title="分页查看最近日志，支持搜索">page</a></li>
+				<li class=""><a data-toggle="tab" href="#tab-logs" title="下载最近日志文件">logs</a></li>
 				<li class="" v-if="files"><a href="files" @dblclick="open('files')" target="_blank" title="nginx浏览">files</a></li>
 				<li class=""><a href="https.html" @dblclick="open('https.html')" target="_blank" title="https证书">https</a></li>
 				<li class=""><a href="logger.html" @dblclick="open('logger.html')" target="_blank" title="logger管理">logger</a></li>
