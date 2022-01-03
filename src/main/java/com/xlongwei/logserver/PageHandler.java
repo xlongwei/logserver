@@ -436,8 +436,9 @@ public class PageHandler implements LightHttpHandler {
 	
 	private String alidns(HttpServerExchange exchange) {
 		String recordId = getParam(exchange, "recordId"), ip = getParam(exchange, "ip");
-		if (StringUtils.isNotBlank(recordId) && (StringUtils.isBlank(LajaxHandler.token)
-				|| LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token")))) {
+		if (dnsEnabled && StringUtils.isNotBlank(recordId)
+				&& (StringUtils.isBlank(ip) || StringUtils.isBlank(LajaxHandler.token)
+						|| LajaxHandler.token.equals(exchange.getRequestHeaders().getFirst("X-Request-Token")))) {
 			try {
 				DescribeDomainRecordsRequest query = new DescribeDomainRecordsRequest();
 				query.setSysRegionId(profile.getRegionId());

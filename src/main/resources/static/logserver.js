@@ -1,7 +1,7 @@
 Lajax.logLevel='info';//info warn error off
 Lajax.logConsole=false;//是否输出日志到控制台
 Lajax.logServer=true;//是否输出日志到logserver
-Lajax.token='xlongwei';//前端通过X-Request-Token传入密钥，后端通过lajax.token属性校验
+Lajax.token='static';//请求头X-Request-Token表示应用如apidemo
 Lajax.prototype._log = function(time, level, ...args){
 	if(!Lajax.logLevel 
 			|| 'info'==Lajax.logLevel 
