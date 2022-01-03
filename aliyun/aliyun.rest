@@ -1,0 +1,8 @@
+@host=http://localhost:9880
+###
+{{host}}/log?type=loggers&appName=logserver
+###
+{{host}}/log?type=page&search=123456789
+###
+{{host}}/log?type=alidns&recordId=4012091293697024
+X-Request-Token: xlongwei

@@ -101,7 +101,8 @@ public class PageHandler implements LightHttpHandler {
 		profile = DefaultProfile.getProfile(regionId, accessKeyId, secret);
 		profile.setCloseTrace(true);// 关闭opentracing但是依赖不能去除
 		HttpClientConfig config = profile.getHttpClientConfig();
-		// config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
+		config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
+		config.setCompatibleMode(true);
 		config.setIgnoreSSLCerts(true);
 		if (configNonBlank) {
 			client = new DefaultAcsClient(profile);
