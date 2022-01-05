@@ -22,6 +22,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
+
 import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
 import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsRequest;
@@ -103,7 +106,12 @@ public class PageHandler implements LightHttpHandler {
 		HttpClientConfig config = profile.getHttpClientConfig();
 		config.setClientType(com.aliyuncs.http.HttpClientType.Compatible);
 		config.setCompatibleMode(true);
-		config.setIgnoreSSLCerts(true);
+		config.setHostnameVerifier(new HostnameVerifier() {
+			@Override
+			public boolean verify(String hostname, SSLSession session) {
+				return true;
+			}
+		});
 		if (configNonBlank) {
 			client = new DefaultAcsClient(profile);
 			httpClient = ((DefaultAcsClient) client).getHttpClient();
