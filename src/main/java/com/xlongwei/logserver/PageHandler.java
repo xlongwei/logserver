@@ -192,9 +192,10 @@ public class PageHandler implements LightHttpHandler {
 			response = alidns(exchange);
 		}else if("regist".equals(type)){
 			response = regist(exchange);
-		}else if("props".equals(type)){
+		} else if ("props".equals(type)) {
 			String key = getParam(exchange, "key"),
-					value = StringUtils.isBlank(key) || !"files,logger".contains(key) ? "" : System.getProperty(key);
+					value = StringUtils.isBlank(key) || !"files,logger".contains(key) ? ""
+							: System.getProperty(key).replaceAll("@[^,]+", "@");
 			response = "{\"" + key + "\":\"" + value + "\"}";
 		}else if("loggers".equals(type)){
 			response = loggers(exchange);
@@ -219,17 +220,22 @@ public class PageHandler implements LightHttpHandler {
 			}
 		}
 		if (StringUtils.isNotBlank(url) && url.startsWith("http")) {
-			Map<String, Object> body = new HashMap<>();
+			Map<String, String> body = new HashMap<>();
 			body.put("logger", getParam(exchange, "logger"));
 			body.put("level", getParam(exchange, "level"));
 			body.put("token", getParam(exchange, "token"));
+			if (StringUtils.isNotBlank(body.get("level")) && StringUtils.isNotBlank(LajaxHandler.token)
+					&& !LajaxHandler.token.equals(body.get("token"))) {
+				body.put("level", StringUtils.EMPTY); // logserver统一控制权限，apidoc通过getParameter获取参数
+			}
 			String bodyString = Config.getInstance().getMapper().writeValueAsString(body);
-			HttpRequest request = new HttpRequest(url);
+			HttpRequest request = new HttpRequest(url + "?logger=" + body.get("logger") + "&level=" + body.get("level")
+					+ "&token=" + body.get("token"));
 			request.setSysMethod(MethodType.POST);
 			request.setHttpContent(bodyString.getBytes(CharEncoding.UTF_8), CharEncoding.UTF_8, FormatType.JSON);
 			HttpResponse response = httpClient.syncInvoke(request);
 			return response.getHttpContentString();
-		}else{
+		} else {
 			return logger(exchange);
 		}
 	}
