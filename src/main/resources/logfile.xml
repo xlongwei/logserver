@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="false" scanPeriod="60 seconds" debug="false">
+    <contextName>${contextName:-logserver}</contextName>
+	<property name="logLevel" value="${logLevel:-DEBUG}" />
+    <property name="logPort" value="${logPort:-6000}"/>
+    <property name="logfile" value="${logfile:-logs/all.logs}"/>
+    <property name="logPattern" value="%cn %d{HH:mm:ss.SSS} %-5level [%thread] %X{cId:-} %logger:%L %.-${logLength:-2048}msg%n"/>
+    
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logfile}</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${logfile}.%d{yyyy-MM-dd}</fileNamePattern>
+		</rollingPolicy>
+		<encoder class="com.xlongwei.logserver.PatternsLayoutEncoder">
+			<pattern>${logPattern}</pattern>
+		</encoder>
+	</appender>
+	<appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="FILE" />
+		<QueueSize>10240</QueueSize>
+		<IncludeCallerData>true</IncludeCallerData>
+	</appender>
+
+	<receiver class="ch.qos.logback.classic.net.server.ServerSocketReceiver">
+		<port>${logPort}</port>
+	</receiver>
+	
+	<logger name="com.xlongwei.logserver" level="WARN" />
+	<logger name="com.networknt" level="INFO"/>
+	<logger name="io.undertow" level="WARN"/>
+	<logger name="org.apache" level="WARN" />
+	<logger name="org.xnio" level="WARN"/>
+	<logger name="org.jboss" level="WARN"/>
+
+	<root level="${logLevel}">
+		<appender-ref ref="ASYNC_FILE" />
+	</root>
+</configuration>
