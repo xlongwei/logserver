@@ -31,8 +31,6 @@ import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsRequest;
 import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsResponse;
 import com.aliyuncs.alidns.model.v20150109.DescribeDomainRecordsResponse.Record;
 import com.aliyuncs.alidns.model.v20150109.UpdateDomainRecordRequest;
-import com.aliyuncs.cms.model.v20190101.PutCustomMetricRequest;
-import com.aliyuncs.cms.model.v20190101.PutCustomMetricResponse;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.http.HttpClientConfig;
 import com.aliyuncs.http.HttpClientFactory;
@@ -76,14 +74,14 @@ public class PageHandler implements LightHttpHandler {
 	private ObjectMapper mapper = Config.getInstance().getMapper();
 	private String json = MimeMappings.DEFAULT.getMimeType("json");
 	private static final Logger log = LoggerFactory.getLogger(PageHandler.class);
-	private IAcsClient client = null;
+	public static IAcsClient client = null;
 	private IClientProfile profile = null;
 	private boolean metricEnabled = false, dnsEnabled = false;
 	private String domainName = ExecUtil.firstNotBlank(System.getenv("domainName"), "xlongwei.com");
 	private String recordId = ExecUtil.firstNotBlank(System.getenv("recordId"), "4012091293697024");
 	private String lightSearch = System.getProperty("light-search", "http://localhost:9200");
-	private LinkedList<String[]> metrics = new LinkedList<>();
-	private Map<String, Tuple<AtomicInteger, AtomicInteger>> metricsMap = new HashMap<>();
+	public static final LinkedList<String[]> metrics = new LinkedList<>();
+	public static final Map<String, Tuple<AtomicInteger, AtomicInteger>> metricsMap = new HashMap<>();
 	private String wellKnown = ExecUtil.firstNotBlank(System.getProperty("wellKnown"), "/soft/statics")+"/.well-known/acme-challenge";
 	
 	static {
@@ -120,7 +118,7 @@ public class PageHandler implements LightHttpHandler {
 		}
 		if(metricEnabled){
 			//每15秒上报一次统计数据，每4个小时清理一下统计数据
-			scheduler.scheduleWithFixedDelay(this::putCustomMetrics, 15, 15, TimeUnit.SECONDS);
+			scheduler.scheduleWithFixedDelay(Alicms::putCustomMetrics, 15, 15, TimeUnit.SECONDS);
 			Calendar calendar = Calendar.getInstance();
 			long minuteOfHour = TimeUnit.HOURS.toMinutes(1);
 			long minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY)*minuteOfHour+calendar.get(Calendar.MINUTE);
@@ -131,50 +129,7 @@ public class PageHandler implements LightHttpHandler {
 		}
 	}
 
-	private void putCustomMetrics() {
-		List<PutCustomMetricRequest.MetricList> metricListList = new ArrayList<>();
-		String[] metric = null;
-		String time = String.valueOf(System.currentTimeMillis());
-		while((metric=metrics.pollFirst())!=null) {
-			PutCustomMetricRequest.MetricList metricList1 = new PutCustomMetricRequest.MetricList();
-		    metricList1.setGroupId("0");
-		    metricList1.setMetricName(metric[0]);
-		    metricList1.setValues("{\"value\":"+metric[1]+"}");
-		    metricList1.setDimensions("{\"appName\":\""+metric[2]+"\"}");
-		    metricList1.setTime(time);
-		    metricList1.setType("0");
-		    metricListList.add(metricList1);
-		    //add metric to metricsMap
-		    try {
-		    	int dot = metric[1].indexOf('.');
-		    	Integer value = Integer.valueOf(dot==-1 ? metric[1] : metric[1].substring(0, dot));
-		    	if(value.intValue() > 0) {
-			        String key = metric[0]+"."+metric[2];
-			        Tuple<AtomicInteger, AtomicInteger> tuple = metricsMap.get(key);
-			        if(tuple == null) {
-			        	metricsMap.put(key, new Tuple<>(new AtomicInteger(1), new AtomicInteger(value)));
-			        }else {
-			        	tuple.first.incrementAndGet();
-			        	tuple.second.getAndAdd(value);
-			        }
-		    	}
-		    }catch(Exception e) {
-		    	//ignore
-		    }
-		}
-		if(metricListList.isEmpty() || !metricEnabled) {
-			return;
-		}
-		try {
-			log.info("metrics={}", metricListList.size());
-			PutCustomMetricRequest request = new PutCustomMetricRequest();
-			request.setMetricLists(metricListList);
-			PutCustomMetricResponse response = client.getAcsResponse(request);
-			log.info("code={}, message={}, requestId={}", response.getCode(), response.getMessage(), response.getRequestId());
-		}catch(Exception e) {
-			log.warn("metrics upload failed: {}", e.getMessage());
-		}
-	}
+	
 
 	@Override
 	public void handleRequest(HttpServerExchange exchange) throws Exception {
