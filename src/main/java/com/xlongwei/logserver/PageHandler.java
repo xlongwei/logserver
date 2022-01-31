@@ -150,7 +150,7 @@ public class PageHandler implements LightHttpHandler {
 		} else if ("props".equals(type)) {
 			String key = getParam(exchange, "key"),
 					value = StringUtils.isBlank(key) || !"files,logger".contains(key) ? ""
-							: System.getProperty(key).replaceAll("@[^,]+", "@");
+							: StringUtils.trimToEmpty(System.getProperty(key)).replaceAll("@[^,]+", "@");
 			response = "{\"" + key + "\":\"" + value + "\"}";
 		}else if("loggers".equals(type)){
 			response = loggers(exchange);
